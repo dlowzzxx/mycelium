@@ -90,6 +90,19 @@ uv run ruff check mycelium tests
 Use the equivalent commands inside an activated pip environment if you are not
 using uv.
 
+Run the static security scan for the shipped package (same gate as CI, #145):
+
+```bash
+cd sdk
+pip install bandit
+bandit -r mycelium -lll -iii
+```
+
+With uv, `uvx bandit -r mycelium -lll -iii` from `sdk/` is equivalent.
+The target is `mycelium/` only, so tests, examples, and caches are excluded
+by scope. Bandit exits non-zero on findings; document any `nosec`
+suppression with a reason instead of silencing it.
+
 Additional expectations depend on what changed:
 
 - **Bug fix:** add a regression test that fails before the fix and passes after
@@ -198,6 +211,7 @@ Copy the applicable items into the pull request description:
 - [ ] Full `pytest tests/ -v` passes
 - [ ] Coverage gate passes (`pytest --cov=mycelium --cov-report=term-missing`)
 - [ ] `ruff check mycelium tests` passes
+- [ ] `bandit -r mycelium -lll -iii` passes (from `sdk/`)
 - [ ] Redis/Postgres tests ran, or the PR explains why they do not apply
 - [ ] No relevant tests were silently skipped
 - [ ] Compatibility and durable-state impact were reviewed

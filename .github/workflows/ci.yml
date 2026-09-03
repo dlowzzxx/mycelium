@@ -206,6 +206,18 @@ jobs:
         working-directory: sdk
         run: ruff check mycelium tests
 
+      - name: Bandit security scan
+        working-directory: sdk
+        # Static security gate for the shipped package (#145).
+        # Bandit exits non-zero on findings. HIGH severity (-lll) + HIGH
+        # confidence (-iii) keeps the gate high-signal with no broad skips:
+        # the target is `mycelium/` only, so tests, examples, and caches are
+        # excluded by scope. No HIGH/HIGH findings exist on main; document
+        # any future `nosec` suppression with a reason instead of silencing it.
+        run: |
+          pip install bandit
+          bandit -r mycelium -lll -iii
+
   markdown-links:
     runs-on: ubuntu-latest
     steps:
