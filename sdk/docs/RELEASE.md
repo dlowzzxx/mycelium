@@ -131,11 +131,37 @@ the PR description — do not skip silently.
 
 On merge to `main`, [release.yml](../../.github/workflows/release.yml) tags
 `v{version}` if the tag does not exist, then [publish.yml](../../.github/workflows/publish.yml)
-uploads to PyPI. Confirm:
+generates a CycloneDX JSON SBOM from the release wheel, attaches it to the
+GitHub Release, and uploads to PyPI. Confirm:
 
 - [ ] GitHub Release notes look right (from CHANGELOG extract).
+- [ ] GitHub Release has `mycelium-runtime-{version}-sbom.cyclonedx.json`.
 - [ ] PyPI shows the new version: https://pypi.org/project/mycelium-runtime/
 - [ ] Hotfix: notify affected design partners; otherwise no “blast” needed.
+
+### SBOM (CycloneDX JSON, #147)
+
+Every release publishes `dist/mycelium-runtime-{version}-sbom.cyclonedx.json`
+as a GitHub Release artifact. It is generated in `publish.yml` from the built
+wheel's resolved environment (`cyclonedx-py environment --pyproject
+pyproject.toml`), so the root component is `mycelium-runtime` at the release
+version. SBOM generation failure blocks the PyPI publish step.
+
+Reproduce locally from `sdk/` after building:
+
+```bash
+python -m build
+pip install dist/*.whl cyclonedx-bom
+cyclonedx-py environment --pyproject pyproject.toml --mc-type library \
+  --output-reproducible --output-format JSON \
+  --output-file dist/mycelium-runtime-<version>-sbom.cyclonedx.json
+```
+
+Inspect with any CycloneDX 1.6 consumer, for example:
+
+```bash
+python -c "import json; print(json.load(open('dist/mycelium-runtime-<version>-sbom.cyclonedx.json'))['metadata']['component'])"
+```
 
 ---
 
