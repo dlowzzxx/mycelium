@@ -422,7 +422,11 @@ class LedgerRecoveryMixin:
                 existing,
                 status=legacy_status_from_terminal(TerminalOutcome.COMPLETED),
                 terminal_outcome=TerminalOutcome.COMPLETED.value,
-                result=_evidence_value(result),
+                result=(
+                    None
+                    if not getattr(self, "_store_result", True)
+                    else _evidence_value(result)
+                ),
                 finished_at=now,
                 lease_until=None,
                 side_effect_boundary=SideEffectBoundary.CROSSED.value,

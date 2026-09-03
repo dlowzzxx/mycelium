@@ -196,6 +196,8 @@ class ActionLedger(LedgerRecoveryMixin):
         reclaim_requires_death_signal: bool = False,
         presumed_dead_after: float | None = None,
         request_identity_policy: str = REQUEST_IDENTITY_POLICY_DERIVED,
+        store_args: bool = True,
+        store_result: bool = True,
     ) -> None:
         self._storage = storage if storage is not None else InMemoryLedgerStorage()
         self._lease_ttl = lease_ttl
@@ -256,6 +258,12 @@ class ActionLedger(LedgerRecoveryMixin):
                 f"got {request_identity_policy!r}"
             )
         self._request_identity_policy = request_identity_policy
+        # Payload persistence controls (issue #82): skipping arg/result
+        # storage keeps effect_id derived from the full call, so transition
+        # identity stays stable. store_result=False means replay returns
+        # None without re-execution; callers must handle a missing result.
+        self._store_args = store_args
+        self._store_result = store_result
 
     # --- storage boundary (fail-closed; see LedgerStorageUnavailableError) ---
 
@@ -351,6 +359,9 @@ class ActionLedger(LedgerRecoveryMixin):
         with a different tool, scope, or meaningful arguments is always
         fail-closed (``off`` does not dual-execute that ticket).
         """
+        if not self._store_args:
+            # No stored payload to compare; effect_id still guards identity.
+            return
         exclude = _args_drift_exclude_keys(binding)
         incoming_fp = _args_drift_fingerprint(args, kwargs, exclude=exclude)
         conflict: LedgerEntry | None = None
@@ -643,6 +654,8 @@ class ActionLedger(LedgerRecoveryMixin):
         if handoff_raw is None and active_handoff is not None:
             handoff_raw = active_handoff.handoff_id
         stored_args, stored_kwargs = _evidence_args(bound["args"], bound["kwargs"])
+        if not self._store_args:
+            stored_args, stored_kwargs = [], {}
         # Stable effect identity, present whenever a binding is available to
         # derive it from (classified tools only — unclassified claim() has no
         # side-effect class and stays effect_id=None). Same derivation as
@@ -1655,7 +1668,7 @@ class ActionLedger(LedgerRecoveryMixin):
             existing,
             status=legacy_status_from_terminal(TerminalOutcome.COMPLETED),
             terminal_outcome=TerminalOutcome.COMPLETED.value,
-            result=_evidence_value(result),
+            result=None if not self._store_result else _evidence_value(result),
             finished_at=time.time(),
             lease_until=None,
             side_effect_boundary=SideEffectBoundary.CROSSED.value,
