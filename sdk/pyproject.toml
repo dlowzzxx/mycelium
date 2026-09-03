@@ -102,6 +102,9 @@ select = ["E", "F", "I", "UP"]
 exclude = [
   ".coverage",
   ".coverage.*",
+  "coverage.xml",
+  "coverage.json",
+  "coverage.lcov",
   "htmlcov/",
   ".hypothesis/",
   ".pytest_cache/",
