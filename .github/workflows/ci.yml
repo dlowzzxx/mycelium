@@ -185,7 +185,7 @@ jobs:
           if [ -f .coverage ]; then
             echo "### Python 3.12 Test Coverage Report" >> $GITHUB_STEP_SUMMARY
             echo '```text' >> $GITHUB_STEP_SUMMARY
-            coverage report >> $GITHUB_STEP_SUMMARY 2>&1 || true
+            python -m coverage report >> $GITHUB_STEP_SUMMARY 2>&1 || true
             echo '```' >> $GITHUB_STEP_SUMMARY
           fi
 

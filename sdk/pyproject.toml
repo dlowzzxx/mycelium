@@ -100,6 +100,9 @@ select = ["E", "F", "I", "UP"]
 # contains the README, build metadata, and the complete runtime package.
 [tool.hatch.build.targets.sdist]
 exclude = [
+  ".coverage",
+  ".coverage.*",
+  "htmlcov/",
   ".hypothesis/",
   ".pytest_cache/",
   ".ruff_cache/",
