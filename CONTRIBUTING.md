@@ -313,3 +313,22 @@ lychee --verbose --no-progress --offline \
   --exclude-path graphify-out \
   --exclude-path .cache \
   "**/*.md"
+```
+
+### Dependency vulnerability audit
+
+CI audits the SDK runtime and release extras for known vulnerabilities (#146).
+Run the same local check from `sdk/` before opening a pull request that
+touches dependencies:
+
+```bash
+pip install -e ".[redis,postgres,observability]" pip-audit
+pip-audit
+```
+
+`pip-audit` exits non-zero on findings and on advisory-service errors, so an
+unavailable service fails closed. Temporary exceptions must stay specific,
+justified, and time-bounded (for example,
+`pip-audit --ignore-vuln PYSEC-0000-0000 # reason: <why it cannot be fixed
+yet>, review by YYYY-MM-DD`). Do not add broad skips, and do not auto-upgrade
+dependencies in the audit step.

@@ -206,6 +206,26 @@ jobs:
         working-directory: sdk
         run: ruff check mycelium tests
 
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Audit dependencies for known vulnerabilities
+        # Dependency vulnerability gate (#146). pip-audit exits non-zero on
+        # findings and on advisory-service errors, so an unavailable service
+        # fails closed instead of passing silently. Temporary exceptions must
+        # be specific (--ignore-vuln ID) with a reason and review date in the
+        # comment; do not add broad skips or --fix upgrades here.
+        run: |
+          pip install -e "./sdk[redis,postgres,observability]" pip-audit
+          pip-audit
+
   markdown-links:
     runs-on: ubuntu-latest
     steps:
