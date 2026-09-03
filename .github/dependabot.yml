@@ -14,7 +14,6 @@ updates:
     # Runtime dependency updates remain separate so behaviour changes are visible.
     groups:
       dev-dependencies:
-        dependency-type: "development"
         patterns:
           - "ruff"
           - "pytest*"
