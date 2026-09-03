@@ -166,9 +166,28 @@ jobs:
         run: pip install -e "./sdk[dev,redis,postgres]"
 
       - name: SDK unit tests
+        if: matrix.python-version != '3.12'
         working-directory: sdk
         # Full suite already exercises Redis/Postgres under REQUIRE_*=1.
         run: pytest tests/ -v
+
+      - name: SDK unit tests with coverage gate
+        if: matrix.python-version == '3.12'
+        working-directory: sdk
+        # Full suite already exercises Redis/Postgres under REQUIRE_*=1.
+        # Run coverage measurement and enforce fail-under gate on primary Python 3.12.
+        run: pytest tests/ -v --cov=mycelium --cov-report=term-missing
+
+      - name: Output coverage report to job summary
+        if: always() && matrix.python-version == '3.12'
+        working-directory: sdk
+        run: |
+          if [ -f .coverage ]; then
+            echo "### Python 3.12 Test Coverage Report" >> $GITHUB_STEP_SUMMARY
+            echo '```text' >> $GITHUB_STEP_SUMMARY
+            coverage report >> $GITHUB_STEP_SUMMARY 2>&1 || true
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Concurrency proofs must not skip
         working-directory: sdk

@@ -2781,4 +2781,5 @@ Clone the GitHub repo to run proofs and tests. PyPI installs only the `mycelium`
 git clone https://github.com/mycelium-labs/mycelium.git
 cd mycelium/sdk && pip install -e ".[dev]"
 pytest tests/ -v
+pytest --cov=mycelium --cov-report=term-missing
 ```
