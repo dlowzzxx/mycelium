@@ -6,6 +6,11 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .coverage
+.coverage.*
+coverage.xml
+coverage.json
+coverage.lcov
+htmlcov/
 .context/
 *.egg-info/
 dist/

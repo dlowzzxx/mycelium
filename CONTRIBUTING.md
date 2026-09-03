@@ -55,6 +55,7 @@ git clone https://github.com/mycelium-labs/mycelium.git
 cd mycelium/sdk
 uv sync --extra dev --extra redis --extra postgres
 uv run pytest tests/ -v
+uv run pytest --cov=mycelium --cov-report=term-missing
 uv run ruff check mycelium tests
 ```
 
@@ -67,6 +68,7 @@ python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev,redis,postgres]"
 pytest tests/ -v
+pytest --cov=mycelium --cov-report=term-missing
 ruff check mycelium tests
 ```
 
@@ -81,6 +83,7 @@ checks:
 ```bash
 cd sdk
 uv run pytest tests/ -v
+uv run pytest --cov=mycelium --cov-report=term-missing
 uv run ruff check mycelium tests
 ```
 
@@ -193,6 +196,7 @@ Copy the applicable items into the pull request description:
 
 - [ ] Focused regression tests pass
 - [ ] Full `pytest tests/ -v` passes
+- [ ] Coverage gate passes (`pytest --cov=mycelium --cov-report=term-missing`)
 - [ ] `ruff check mycelium tests` passes
 - [ ] Redis/Postgres tests ran, or the PR explains why they do not apply
 - [ ] No relevant tests were silently skipped

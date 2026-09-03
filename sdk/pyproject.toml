@@ -57,6 +57,7 @@ observability = ["opentelemetry-api>=1.20", "prometheus-client>=0.17"]
 dev = [
     "pytest",
     "pytest-asyncio",
+    "pytest-cov>=5.0.0",
     "ruff",
     "fakeredis",
     "hypothesis",
@@ -79,6 +80,15 @@ packages = ["mycelium"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 
+[tool.coverage.run]
+source = ["mycelium"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 65
+show_missing = true
+
+
 [tool.ruff]
 target-version = "py310"
 line-length = 100
@@ -90,6 +100,12 @@ select = ["E", "F", "I", "UP"]
 # contains the README, build metadata, and the complete runtime package.
 [tool.hatch.build.targets.sdist]
 exclude = [
+  ".coverage",
+  ".coverage.*",
+  "coverage.xml",
+  "coverage.json",
+  "coverage.lcov",
+  "htmlcov/",
   ".hypothesis/",
   ".pytest_cache/",
   ".ruff_cache/",
