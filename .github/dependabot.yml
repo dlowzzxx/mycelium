@@ -1,0 +1,39 @@
+version: 2
+
+updates:
+  # ── Python dependencies under sdk/ (managed with uv) ───────────────────────
+  - package-ecosystem: "uv"
+    directory: "/sdk"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    # Group compatible dev/test dependency updates to reduce noise.
+    # Runtime dependency updates remain separate so behaviour changes are visible.
+    groups:
+      dev-dependencies:
+        patterns:
+          - "ruff"
+          - "pytest*"
+          - "coverage*"
+          - "mypy*"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    # Security updates are not grouped and are always shown individually.
+
+  # ── GitHub Actions ─────────────────────────────────────────────────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
