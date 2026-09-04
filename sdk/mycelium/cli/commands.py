@@ -137,6 +137,19 @@ def cmd_skills_install(*, target: Path, force: bool) -> int:
     return 0
 
 
+def cmd_sidecar_serve(config: Path) -> int:
+    """Run the explicitly configured development-only sidecar."""
+    from mycelium.sidecar import SidecarConfig, serve_config
+
+    try:
+        sidecar_config = SidecarConfig.from_yaml(config)
+        serve_config(sidecar_config)
+    except (OSError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
 def cmd_demo(*, redis: bool = False, slow: bool = False) -> int:
     from mycelium.quickstart import run_demo
 

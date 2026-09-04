@@ -18,7 +18,7 @@ _LAZY_IMPORTS = {
             "cmd_config_schema", "cmd_demo", "cmd_doctor", "cmd_init", "cmd_loops_release",
             "cmd_loops_status", "cmd_outcomes_dttr", "cmd_providers_verify",
             "cmd_providers_verify_report", "cmd_run", "cmd_scope_bind", "cmd_scope_status",
-            "cmd_skills_install", "cmd_verify",
+            "cmd_sidecar_serve", "cmd_skills_install", "cmd_verify",
         )
     },
     "build_parser": ("mycelium.cli.parser", "build_parser"),

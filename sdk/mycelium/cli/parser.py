@@ -20,7 +20,7 @@ def build_parser() -> argparse.ArgumentParser:
         cmd_config_example, cmd_config_schema, cmd_demo, cmd_doctor, cmd_init,
         cmd_loops_release, cmd_loops_status, cmd_outcomes_dttr, cmd_providers_verify,
         cmd_providers_verify_report, cmd_run, cmd_scope_bind, cmd_scope_status,
-        cmd_skills_install, cmd_verify,
+        cmd_sidecar_serve, cmd_skills_install, cmd_verify,
     )
     from mycelium.cli_migrations import cmd_migrate, cmd_state_migrate
     from mycelium.cli_transitions import (
@@ -34,6 +34,19 @@ def build_parser() -> argparse.ArgumentParser:
         description="Mycelium runtime: scaffold config and utilities",
     )
     sub = parser.add_subparsers(dest="command", required=True)
+
+    sidecar_parser = sub.add_parser(
+        "sidecar",
+        help="Run the authenticated development-only local sidecar",
+    )
+    sidecar_sub = sidecar_parser.add_subparsers(dest="sidecar_command", required=True)
+    sidecar_serve = sidecar_sub.add_parser(
+        "serve", help="Serve the configured loopback HTTP adapter"
+    )
+    sidecar_serve.add_argument(
+        "-c", "--config", type=Path, required=True, help="Absolute sidecar YAML configuration"
+    )
+    sidecar_serve.set_defaults(handler=cmd_sidecar_serve)
 
     doctor_parser = sub.add_parser(
         "doctor",
@@ -873,13 +886,15 @@ def dispatch(args: argparse.Namespace) -> int:
         cmd_config_docs, cmd_config_example, cmd_config_schema, cmd_demo, cmd_doctor, cmd_init,
         cmd_loops_release, cmd_loops_status, cmd_outcomes_dttr, cmd_providers_verify,
         cmd_providers_verify_report, cmd_run, cmd_scope_bind, cmd_scope_status,
-        cmd_skills_install, cmd_verify,
+        cmd_sidecar_serve, cmd_skills_install, cmd_verify,
     )
     from mycelium.cli_migrations import cmd_migrate, cmd_state_migrate
     from mycelium.cli_transitions import (
         cmd_transitions_export, cmd_transitions_list, cmd_transitions_mark_dead,
         cmd_transitions_prune, cmd_transitions_release, cmd_transitions_show,
     )
+    if args.command == "sidecar":
+        return cmd_sidecar_serve(args.config)
     if args.command == "init":
         return cmd_init(
             args.output,
