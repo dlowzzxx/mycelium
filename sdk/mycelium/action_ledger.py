@@ -1064,14 +1064,31 @@ class ActionLedger(LedgerRecoveryMixin):
         lease_ttl: float | None = None,
         poll_interval: float | None = None,
         poll_timeout: float | None = None,
+        _effect_id: str | None = None,
     ) -> LedgerEntry:
-        """Claim or resolve a side-effecting tool transition."""
+        """Claim or resolve a side-effecting tool transition.
+
+        ``_effect_id`` is an internal adapter hook for protocol engines that
+        already derived identity outside the legacy Python serializer. The
+        default preserves existing wrapper behavior.
+        """
         self._warn_if_volatile_side_effect_storage(tool, binding)
         ttl = self._lease_ttl if lease_ttl is None else lease_ttl
         interval = self._poll_interval if poll_interval is None else poll_interval
         timeout = self._poll_timeout if poll_timeout is None else poll_timeout
         poll_deadline = time.time() + timeout if timeout is not None else None
-        effect_id = derive_effect_id_for_call(tool, args, kwargs, binding)
+        if _effect_id is not None:
+            if (
+                not _effect_id.startswith("mycelium:effect:v1:")
+                or len(_effect_id) != len("mycelium:effect:v1:") + 64
+                or any(char not in "0123456789abcdef" for char in _effect_id.split(":")[-1])
+            ):
+                raise LedgerError("invalid protocol effect identity")
+        effect_id = (
+            _effect_id
+            if _effect_id is not None
+            else derive_effect_id_for_call(tool, args, kwargs, binding)
+        )
 
         while True:
             claim_kwargs = _claim_kwargs(dict(kwargs), _drop_ledger_keys(dict(kwargs)))
