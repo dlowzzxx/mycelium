@@ -1,5 +1,18 @@
 # Effect State Spec Notes
 
+## Language-neutral protocol design
+
+- [Mycelium Transition Envelope](TRANSITION_ENVELOPE.md): proposed language-neutral
+  envelope, state machine, operations, canonicalization, sidecar architecture,
+  TypeScript client, security model, guarantee map, and roadmap.
+- [Transition Envelope JSON Schema](transition-envelope.schema.json): JSON Schema
+  2020-12 structural contract with separate command, reply, event, stored-record,
+  and error definitions.
+- [Identity fixtures](fixtures/README.md): approved canonicalization, decimal, URL,
+  and effect-ID vectors for cross-language conformance.
+- [Identity decisions](TRANSITION_ENVELOPE_DECISIONS.md): accepted draft decisions,
+  compatibility notes, and remaining RFC questions.
+
 `effect_state.tla` is a TLA+ model of the core `ActionLedger` state machine for
 consequential tools. The Python proof harness in `mycelium.verify.proof` is the
 executable conformance layer; this file is the compact formal sketch.

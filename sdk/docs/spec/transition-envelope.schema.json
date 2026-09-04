@@ -1,0 +1,402 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mycelium-labs.github.io/mycelium/schemas/transition-envelope-1.0.json",
+  "title": "Mycelium Transition Envelope (proposal)",
+  "description": "Structural wire schema for the proposed language-neutral protocol. Stateful CAS, ownership, and authorization rules are normative in TRANSITION_ENVELOPE.md and are not fully expressible in JSON Schema.",
+  "oneOf": [
+    {"$ref": "#/$defs/command"},
+    {"$ref": "#/$defs/reply"},
+    {"$ref": "#/$defs/event"},
+    {"$ref": "#/$defs/stored_record"},
+    {"$ref": "#/$defs/error_reply"}
+  ],
+  "$defs": {
+    "identity_preimage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity_version", "canonicalization_version", "tenant_id", "application_id", "business_request_id", "tool_contract_version", "tool_id", "execution_scope", "destination", "input"],
+      "properties": {
+        "identity_version": {"type": "string", "pattern": "^[0-9]+$", "maxLength": 32},
+        "canonicalization_version": {"type": "string", "pattern": "^jcs-[0-9]+$", "maxLength": 32},
+        "tenant_id": {"$ref": "#/$defs/identifier"},
+        "application_id": {"$ref": "#/$defs/identifier"},
+        "business_request_id": {"$ref": "#/$defs/identifier"},
+        "tool_contract_version": {"$ref": "#/$defs/identifier"},
+        "tool_id": {"$ref": "#/$defs/identifier"},
+        "execution_scope": {"$ref": "#/$defs/json_object"},
+        "destination": {"anyOf": [{"$ref": "#/$defs/json_object"}, {"type": "null"}]},
+        "input": {"$ref": "#/$defs/json_value"}
+      }
+    },
+    "base": {
+      "type": "object",
+      "required": ["protocol_version", "message_type", "message_id", "created_at"],
+      "properties": {
+        "protocol_version": {"type": "string", "minLength": 1},
+        "message_type": {"type": "string", "minLength": 1},
+        "message_id": {"type": "string", "minLength": 1},
+        "created_at": {"$ref": "#/$defs/timestamp"},
+        "extensions": {
+          "type": "object",
+          "description": "Namespaced non-critical extensions. Critical unknown extensions must be rejected by the negotiated protocol version."
+        }
+      }
+    },
+    "command": {
+      "allOf": [
+        {"$ref": "#/$defs/base"},
+        {
+          "type": "object",
+          "required": ["message_type"],
+          "properties": {
+            "message_type": {
+              "enum": [
+                "capabilities",
+                "propose_effect",
+                "claim_effect",
+                "inspect_effect",
+                "renew_lease",
+                "record_decision",
+                "record_boundary",
+                "attach_provider_reference",
+                "complete_effect",
+                "fail_effect",
+                "request_reconciliation",
+                "submit_reconciliation",
+                "request_operator_resolution",
+                "apply_operator_resolution",
+                "authorize_transition_reconsideration",
+                "create_legacy_alias",
+                "get_outcomes"
+              ]
+            },
+            "agent_id": {"$ref": "#/$defs/identifier"},
+            "run_id": {"$ref": "#/$defs/identifier"},
+            "dispatch_id": {"$ref": "#/$defs/identifier"},
+            "request_id": {"$ref": "#/$defs/identifier"},
+            "tool_id": {"$ref": "#/$defs/identifier"},
+            "tool_contract_version": {"$ref": "#/$defs/identifier"},
+            "tenant_id": {"$ref": "#/$defs/identifier"},
+            "application_id": {"$ref": "#/$defs/identifier"},
+            "execution_scope": {"$ref": "#/$defs/json_object"},
+            "destination": {"anyOf": [{"$ref": "#/$defs/json_object"}, {"type": "null"}]},
+            "canonical_input": {"$ref": "#/$defs/json_value"},
+            "canonicalization_version": {"type": "string", "pattern": "^jcs-[0-9]+$"},
+            "identity_version": {"type": "string", "pattern": "^[0-9]+$"},
+            "policy_version": {"type": "string", "minLength": 1},
+            "effect_id": {"type": "string", "minLength": 1, "description": "Optional client cache/consistency hint; never authoritative."},
+            "owner_id": {"type": "string", "minLength": 1},
+            "fence": {"type": "integer", "minimum": 0},
+            "lease_request_seconds": {"type": "number", "exclusiveMinimum": 0},
+            "provider_boundary": {"$ref": "#/$defs/provider_boundary"},
+            "provider_operation_ref": {"type": "string", "minLength": 1},
+            "provider_idempotency": {"$ref": "#/$defs/provider_idempotency"},
+            "decision": {"$ref": "#/$defs/decision"},
+            "reconciliation": {"$ref": "#/$defs/reconciliation"},
+            "operator_resolution": {"$ref": "#/$defs/operator_resolution"},
+            "legacy_alias": {"$ref": "#/$defs/legacy_alias"},
+            "reauthorization": {"$ref": "#/$defs/reauthorization"},
+            "attestation": {"$ref": "#/$defs/attestation"},
+            "result": {},
+            "failure": {"$ref": "#/$defs/failure"}
+          }
+        }
+      ],
+      "unevaluatedProperties": false,
+      "examples": [
+        {
+          "protocol_version": "1.0",
+          "message_type": "claim_effect",
+          "message_id": "msg-01",
+          "created_at": "2026-09-03T10:20:30Z",
+          "agent_id": "agent.example",
+          "run_id": "run-42",
+          "dispatch_id": "dispatch-7",
+          "request_id": "business-operation-884",
+          "tool_id": "external_operation",
+          "execution_scope": {"tenant": "tenant-a", "entity": "record-9"},
+          "canonical_input": {"operation": "update", "entity": "record-9", "value": "new-value"},
+          "canonicalization_version": "jcs-1",
+          "policy_version": "policy-12"
+        }
+      ]
+    },
+    "reply": {
+      "allOf": [
+        {"$ref": "#/$defs/base"},
+        {
+          "type": "object",
+          "required": ["message_type", "effect_state"],
+          "properties": {
+            "message_type": {"type": "string", "pattern": "^reply_"},
+            "effect_id": {"type": "string", "minLength": 1},
+            "request_id": {"type": "string", "minLength": 1},
+            "tool_id": {"type": "string", "minLength": 1},
+            "effect_state": {"$ref": "#/$defs/effect_state"},
+            "terminal_outcome": {"type": "string", "minLength": 1},
+            "claim": {"$ref": "#/$defs/claim"},
+            "owner_id": {"type": "string", "minLength": 1},
+            "lease": {"$ref": "#/$defs/lease"},
+            "fence": {"type": "integer", "minimum": 0},
+            "provider_boundary": {"$ref": "#/$defs/provider_boundary"},
+            "provider_operation_ref": {"type": "string", "minLength": 1},
+            "result": {},
+            "decision": {"$ref": "#/$defs/decision"},
+            "reconciliation": {"$ref": "#/$defs/reconciliation"},
+            "operator_resolution": {"$ref": "#/$defs/operator_resolution"},
+            "next_action": {"type": "string"}
+          }
+        }
+      ],
+      "unevaluatedProperties": false,
+      "examples": [
+        {
+          "protocol_version": "1.0",
+          "message_type": "reply_claim_effect",
+          "message_id": "reply-01",
+          "created_at": "2026-09-03T10:20:31Z",
+          "effect_id": "sha256-lowercase-hex",
+          "effect_state": "INTENDED",
+          "claim": {"status": "CLAIMED"},
+          "owner_id": "engine-worker-1",
+          "fence": 1,
+          "lease": {"validity": "HELD", "leased_until": "2026-09-03T10:21:31Z"}
+        }
+      ]
+    },
+    "event": {
+      "allOf": [
+        {"$ref": "#/$defs/base"},
+        {
+          "type": "object",
+          "required": ["message_type", "effect_id", "owner_id", "fence"],
+          "properties": {
+            "message_type": {"enum": ["event_boundary", "event_provider_reference", "event_outcome"]},
+            "effect_id": {"type": "string", "minLength": 1},
+            "owner_id": {"type": "string", "minLength": 1},
+            "fence": {"type": "integer", "minimum": 0},
+            "provider_boundary": {"$ref": "#/$defs/provider_boundary"},
+            "provider_operation_ref": {"type": "string", "minLength": 1},
+            "outcome": {"$ref": "#/$defs/outcome"}
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "stored_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol_version", "record_type", "effect_id", "effect_state", "tool_id", "canonicalization_version"],
+      "properties": {
+        "protocol_version": {"type": "string", "minLength": 1},
+        "record_type": {"const": "stored_transition"},
+        "effect_id": {"type": "string", "minLength": 1},
+        "request_id": {"type": "string", "minLength": 1},
+        "tool_id": {"$ref": "#/$defs/identifier"},
+        "tool_contract_version": {"$ref": "#/$defs/identifier"},
+        "tenant_id": {"$ref": "#/$defs/identifier"},
+        "application_id": {"$ref": "#/$defs/identifier"},
+        "agent_id": {"$ref": "#/$defs/identifier"},
+        "run_id": {"type": "string", "minLength": 1},
+        "dispatch_id": {"type": "string", "minLength": 1},
+        "execution_scope": {"$ref": "#/$defs/json_object"},
+        "destination": {"anyOf": [{"$ref": "#/$defs/json_object"}, {"type": "null"}]},
+        "canonical_input": {"$ref": "#/$defs/json_value"},
+        "canonicalization_version": {"type": "string", "pattern": "^jcs-[0-9]+$"},
+        "identity_version": {"type": "string", "pattern": "^[0-9]+$"},
+        "policy_version": {"type": "string", "minLength": 1},
+        "effect_state": {"$ref": "#/$defs/effect_state"},
+        "terminal_outcome": {"type": "string", "minLength": 1},
+        "owner_id": {"type": "string", "minLength": 1},
+        "lease": {"$ref": "#/$defs/lease"},
+        "fence": {"type": "integer", "minimum": 0},
+        "provider_boundary": {"$ref": "#/$defs/provider_boundary"},
+        "provider_operation_ref": {"type": "string", "minLength": 1},
+        "provider_idempotency": {"$ref": "#/$defs/provider_idempotency"},
+        "result": {},
+        "failure": {"$ref": "#/$defs/failure"},
+        "decision": {"$ref": "#/$defs/decision"},
+        "reconciliation": {"$ref": "#/$defs/reconciliation"},
+        "operator_resolution": {"$ref": "#/$defs/operator_resolution"},
+        "outcome": {"$ref": "#/$defs/outcome"},
+        "started_at": {"$ref": "#/$defs/timestamp"},
+        "finished_at": {"$ref": "#/$defs/timestamp"},
+        "extensions": {"type": "object"}
+      }
+    },
+    "error_reply": {
+      "allOf": [
+        {"$ref": "#/$defs/base"},
+        {
+          "type": "object",
+          "required": ["message_type", "error"],
+          "properties": {
+            "message_type": {"const": "error"},
+            "error": {"$ref": "#/$defs/error"}
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "pattern": "^(?!\\s*$).+"
+    },
+    "json_value": {
+      "description": "Identity-bearing JSON value. Raw floating-point values are intentionally excluded; use an application-defined integer minor-unit object or validated decimal-1/url-1 typed object.",
+      "oneOf": [
+        {"type": "null"},
+        {"type": "boolean"},
+        {"type": "string", "maxLength": 65536},
+        {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+        {"type": "array", "maxItems": 10000, "items": {"$ref": "#/$defs/json_value"}},
+        {"$ref": "#/$defs/json_object"}
+      ]
+    },
+    "json_object": {
+      "type": "object",
+      "maxProperties": 1000,
+      "propertyNames": {"type": "string", "maxLength": 1024},
+      "additionalProperties": {"$ref": "#/$defs/json_value"}
+    },
+    "decimal": {
+      "description": "decimal-1 exact value. The engine additionally enforces at most 38 total digits; the pattern enforces normalized syntax and scale at most 18.",
+      "type": "object", "additionalProperties": false,
+      "required": ["$type", "profile", "value"],
+      "properties": {"$type": {"const": "decimal"}, "profile": {"const": "decimal-1"}, "value": {"type": "string", "pattern": "^(?:(?:0|[1-9][0-9]*|-[1-9][0-9]*)(\\.[0-9]{0,17}[1-9])?|-0\\.[0-9]{0,17}[1-9])$", "maxLength": 40}}
+    },
+    "url": {
+      "type": "object", "additionalProperties": false,
+      "required": ["$type", "profile", "value"],
+      "properties": {"$type": {"const": "url"}, "profile": {"const": "url-1"}, "value": {"type": "string", "minLength": 1, "maxLength": 8192}}
+    },
+    "legacy_alias": {
+      "type": "object", "additionalProperties": false,
+      "required": ["legacy_identity", "identity_v1_identity", "identity_v1_preimage_digest", "authority", "reason", "timestamp", "source_evidence", "migration_version", "restrictions"],
+      "properties": {"legacy_identity": {"$ref": "#/$defs/identifier"}, "identity_v1_identity": {"$ref": "#/$defs/identifier"}, "identity_v1_preimage_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "authority": {"$ref": "#/$defs/identifier"}, "reason": {"type": "string", "minLength": 1, "maxLength": 4096}, "timestamp": {"$ref": "#/$defs/timestamp"}, "source_evidence": {"$ref": "#/$defs/json_object"}, "migration_version": {"$ref": "#/$defs/identifier"}, "restrictions": {"type": "array", "items": {"$ref": "#/$defs/identifier"}, "maxItems": 100}}
+    },
+    "reauthorization": {
+      "type": "object", "additionalProperties": false,
+      "required": ["original_effect_id", "original_policy_version", "new_policy_version", "authorizer", "reason", "evidence_reference", "destination_input_digest", "timestamp", "resulting_business_request_id", "creates_new_transition", "linkage", "audit_outcome"],
+      "properties": {"original_effect_id": {"$ref": "#/$defs/identifier"}, "original_policy_version": {"$ref": "#/$defs/identifier"}, "new_policy_version": {"$ref": "#/$defs/identifier"}, "authorizer": {"$ref": "#/$defs/identifier"}, "reason": {"type": "string", "minLength": 1, "maxLength": 4096}, "evidence_reference": {"$ref": "#/$defs/identifier"}, "destination_input_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "timestamp": {"$ref": "#/$defs/timestamp"}, "resulting_business_request_id": {"$ref": "#/$defs/identifier"}, "creates_new_transition": {"type": "boolean"}, "linkage": {"$ref": "#/$defs/identifier"}, "audit_outcome": {"$ref": "#/$defs/identifier"}}
+    },
+    "attestation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "issuer", "subject_effect", "verification_status"],
+      "properties": {"type": {"$ref": "#/$defs/identifier"}, "issuer": {"$ref": "#/$defs/identifier"}, "subject_effect": {"$ref": "#/$defs/identifier"}, "provider_operation_ref": {"$ref": "#/$defs/identifier"}, "issued_at": {"$ref": "#/$defs/timestamp"}, "payload_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "verification_status": {"enum": ["unverified", "verified", "rejected"]}, "verifier": {"$ref": "#/$defs/identifier"}, "evidence": {"$ref": "#/$defs/json_object", "description": "Opaque provider evidence. Implementations must redact secrets before storing or emitting it."}}
+    },
+    "effect_state": {"type": "string", "enum": ["INTENDED", "ATTEMPTING", "COMMITTED", "ABORTED", "UNKNOWN"]},
+    "provider_boundary": {"type": "string", "enum": ["not_crossed", "maybe_crossed", "crossed"]},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": {"enum": ["CLAIMED", "COMMITTED", "ACTIVE_OWNER", "BLOCKED", "UNKNOWN"]},
+        "message": {"type": "string"}
+      }
+    },
+    "lease": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["validity"],
+      "properties": {
+        "validity": {"enum": ["HELD", "EXPIRED", "UNBOUNDED"]},
+        "leased_until": {"$ref": "#/$defs/timestamp"},
+        "last_heartbeat_at": {"$ref": "#/$defs/timestamp"}
+      }
+    },
+    "provider_idempotency": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "key": {"type": "string", "minLength": 1},
+        "parameter": {"type": "string", "minLength": 1},
+        "valid_for_seconds": {"type": "number", "exclusiveMinimum": 0},
+        "first_attempt_at": {"$ref": "#/$defs/timestamp"}
+      }
+    },
+    "failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code"],
+      "properties": {
+        "code": {"type": "string", "minLength": 1},
+        "message": {"type": "string"},
+        "boundary": {"$ref": "#/$defs/provider_boundary"}
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowed", "verdicts"],
+      "properties": {
+        "allowed": {"type": "boolean"},
+        "verdicts": {"type": "array", "items": {"$ref": "#/$defs/verdict"}},
+        "policy_version": {"type": "string"}
+      }
+    },
+    "verdict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "allowed"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "allowed": {"type": "boolean"},
+        "reason": {"type": ["string", "null"]}
+      }
+    },
+    "reconciliation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": {"enum": ["COMPLETED", "NOT_EXECUTED", "UNKNOWN"]},
+        "reconciler_id": {"type": "string"},
+        "evidence_ref": {"type": "string"},
+        "result": {}
+      }
+    },
+    "operator_resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resolution", "resolved_by", "reason"],
+      "properties": {
+        "resolution": {"enum": ["completed", "not_executed"]},
+        "resolved_by": {"type": "string", "minLength": 1},
+        "reason": {"type": "string", "minLength": 1},
+        "resolved_at": {"$ref": "#/$defs/timestamp"},
+        "authorization_ref": {"type": "string"}
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event"],
+      "properties": {
+        "event": {"type": "string", "minLength": 1},
+        "at": {"$ref": "#/$defs/timestamp"},
+        "evidence_ref": {"type": "string"},
+        "export_status": {"type": "string"}
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "retryable", "state_may_have_changed", "effect_may_have_happened"],
+      "properties": {
+        "code": {"type": "string", "enum": ["INVALID_REQUEST", "INVALID_JSON", "REQUEST_TOO_LARGE", "NOT_FOUND", "UNSUPPORTED_PROTOCOL", "UNSUPPORTED_CANONICALIZATION_VERSION", "UNSUPPORTED_IDENTITY_VERSION", "UNSUPPORTED_CAPABILITY", "UNSUPPORTED_VALUE_TYPE", "DUPLICATE_OBJECT_KEY", "INVALID_UNICODE", "NON_FINITE_NUMBER", "NON_CANONICAL_NUMBER", "INTEGER_OUT_OF_RANGE", "INVALID_TIMESTAMP", "INVALID_URL", "INVALID_BINARY", "INVALID_DECIMAL", "NON_CANONICAL_DECIMAL", "SECRET_VALUE_PROHIBITED", "IDENTITY_REQUIRED", "IDENTITY_PREIMAGE_TOO_LARGE", "EFFECT_ID_MISMATCH", "AUTHENTICATION_REQUIRED", "AUTHENTICATION_INVALID", "AUTHENTICATION_EXPIRED", "TENANT_MISMATCH", "APPLICATION_MISMATCH", "CAPABILITY_DENIED", "POLICY_REAUTHORIZATION_UNSUPPORTED", "IDENTITY_CONFLICT", "ARGUMENT_DRIFT", "POLICY_DENIED", "ACTIVE_OWNER", "STALE_FENCE", "LEASE_LOST", "INVALID_TRANSITION", "ALREADY_COMMITTED", "AMBIGUOUS_OUTCOME", "RECONCILIATION_REQUIRED", "RECONCILIATION_UNAVAILABLE", "OPERATOR_RESOLUTION_REQUIRED", "AUTHORIZATION_FAILURE", "STORAGE_UNAVAILABLE", "EVIDENCE_RECORDING_FAILURE", "INTERNAL_PROTOCOL_ERROR"]},
+        "message": {"type": "string"},
+        "retryable": {"type": "boolean"},
+        "caller_action_required": {"type": "boolean"},
+        "state_may_have_changed": {"type": "boolean"},
+        "effect_may_have_happened": {"type": "boolean"},
+        "effect_id": {"type": "string"},
+        "details": {"type": "object"}
+      }
+    }
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "fixture_version": "identity-v1",
+  "status": "approved-development-profile",
+  "hash": {
+    "algorithm": "SHA-256",
+    "domain_separator_utf8": "mycelium.effect.v1\\n",
+    "output": "mycelium:effect:v1:<64 lowercase hexadecimal characters>",
+    "input": "UTF-8(domain_separator + canonical_identity_preimage_json)"
+  },
+  "identity_preimage_fields": [
+    "identity_version",
+    "canonicalization_version",
+    "tenant_id",
+    "application_id",
+    "business_request_id",
+    "tool_contract_version",
+    "tool_id",
+    "execution_scope",
+    "destination",
+    "input"
+  ],
+  "excluded_delivery_and_execution_fields": [
+    "protocol_version",
+    "message_id",
+    "dispatch_id",
+    "run_id",
+    "trace_id",
+    "span_id",
+    "owner_id",
+    "lease",
+    "fence",
+    "provider_idempotency_key",
+    "provider_operation_ref",
+    "provider_response",
+    "reconciliation_verdict",
+    "operator_identity",
+    "timestamps",
+    "outcome_metadata",
+    "policy_decision_evidence"
+  ],
+  "canonical_json_by_case": {
+    "base": "{\"application_id\":\"app.example\",\"business_request_id\":\"request-884\",\"canonicalization_version\":\"jcs-1\",\"destination\":{\"id\":\"record-9\",\"kind\":\"record\"},\"execution_scope\":{\"entity\":\"record-9\",\"tenant\":\"tenant-a\"},\"identity_version\":\"1\",\"input\":{\"operation\":\"update\",\"value\":\"new-value\"},\"tenant_id\":\"tenant-a\",\"tool_contract_version\":\"1\",\"tool_id\":\"external_operation\"}",
+    "changed-meaningful-input": "{\"application_id\":\"app.example\",\"business_request_id\":\"request-884\",\"canonicalization_version\":\"jcs-1\",\"destination\":{\"id\":\"record-9\",\"kind\":\"record\"},\"execution_scope\":{\"entity\":\"record-9\",\"tenant\":\"tenant-a\"},\"identity_version\":\"1\",\"input\":{\"operation\":\"update\",\"value\":\"other-value\"},\"tenant_id\":\"tenant-a\",\"tool_contract_version\":\"1\",\"tool_id\":\"external_operation\"}",
+    "changed-destination": "{\"application_id\":\"app.example\",\"business_request_id\":\"request-884\",\"canonicalization_version\":\"jcs-1\",\"destination\":{\"id\":\"record-10\",\"kind\":\"record\"},\"execution_scope\":{\"entity\":\"record-10\",\"tenant\":\"tenant-a\"},\"identity_version\":\"1\",\"input\":{\"operation\":\"update\",\"value\":\"new-value\"},\"tenant_id\":\"tenant-a\",\"tool_contract_version\":\"1\",\"tool_id\":\"external_operation\"}",
+    "changed-tool": "{\"application_id\":\"app.example\",\"business_request_id\":\"request-884\",\"canonicalization_version\":\"jcs-1\",\"destination\":{\"id\":\"record-9\",\"kind\":\"record\"},\"execution_scope\":{\"entity\":\"record-9\",\"tenant\":\"tenant-a\"},\"identity_version\":\"1\",\"input\":{\"operation\":\"update\",\"value\":\"new-value\"},\"tenant_id\":\"tenant-a\",\"tool_contract_version\":\"1\",\"tool_id\":\"other_operation\"}",
+    "changed-tenant": "{\"application_id\":\"app.example\",\"business_request_id\":\"request-884\",\"canonicalization_version\":\"jcs-1\",\"destination\":{\"id\":\"record-9\",\"kind\":\"record\"},\"execution_scope\":{\"entity\":\"record-9\",\"tenant\":\"tenant-b\"},\"identity_version\":\"1\",\"input\":{\"operation\":\"update\",\"value\":\"new-value\"},\"tenant_id\":\"tenant-b\",\"tool_contract_version\":\"1\",\"tool_id\":\"external_operation\"}",
+    "changed-business-request": "{\"application_id\":\"app.example\",\"business_request_id\":\"request-885\",\"canonicalization_version\":\"jcs-1\",\"destination\":{\"id\":\"record-9\",\"kind\":\"record\"},\"execution_scope\":{\"entity\":\"record-9\",\"tenant\":\"tenant-a\"},\"identity_version\":\"1\",\"input\":{\"operation\":\"update\",\"value\":\"new-value\"},\"tenant_id\":\"tenant-a\",\"tool_contract_version\":\"1\",\"tool_id\":\"external_operation\"}",
+    "different-agent": "{\"application_id\":\"app.example\",\"business_request_id\":\"request-884\",\"canonicalization_version\":\"jcs-1\",\"destination\":{\"id\":\"record-9\",\"kind\":\"record\"},\"execution_scope\":{\"entity\":\"record-9\",\"tenant\":\"tenant-a\"},\"identity_version\":\"1\",\"input\":{\"operation\":\"update\",\"value\":\"new-value\"},\"tenant_id\":\"tenant-a\",\"tool_contract_version\":\"1\",\"tool_id\":\"external_operation\"}",
+    "different-application": "{\"application_id\":\"app.other\",\"business_request_id\":\"request-884\",\"canonicalization_version\":\"jcs-1\",\"destination\":{\"id\":\"record-9\",\"kind\":\"record\"},\"execution_scope\":{\"entity\":\"record-9\",\"tenant\":\"tenant-a\"},\"identity_version\":\"1\",\"input\":{\"operation\":\"update\",\"value\":\"new-value\"},\"tenant_id\":\"tenant-a\",\"tool_contract_version\":\"1\",\"tool_id\":\"external_operation\"}",
+    "changed-contract-version": "{\"application_id\":\"app.example\",\"business_request_id\":\"request-884\",\"canonicalization_version\":\"jcs-1\",\"destination\":{\"id\":\"record-9\",\"kind\":\"record\"},\"execution_scope\":{\"entity\":\"record-9\",\"tenant\":\"tenant-a\"},\"identity_version\":\"1\",\"input\":{\"operation\":\"update\",\"value\":\"new-value\"},\"tenant_id\":\"tenant-a\",\"tool_contract_version\":\"2\",\"tool_id\":\"external_operation\"}"
+  },
+  "base_case": {
+    "name": "base",
+    "identity_preimage": {
+      "application_id": "app.example",
+      "business_request_id": "request-884",
+      "canonicalization_version": "jcs-1",
+      "destination": {"id": "record-9", "kind": "record"},
+      "execution_scope": {"entity": "record-9", "tenant": "tenant-a"},
+      "identity_version": "1",
+      "input": {"operation": "update", "value": "new-value"},
+      "tenant_id": "tenant-a",
+      "tool_contract_version": "1",
+      "tool_id": "external_operation"
+    },
+    "expected_canonical_json": "{\"application_id\":\"app.example\",\"business_request_id\":\"request-884\",\"canonicalization_version\":\"jcs-1\",\"destination\":{\"id\":\"record-9\",\"kind\":\"record\"},\"execution_scope\":{\"entity\":\"record-9\",\"tenant\":\"tenant-a\"},\"identity_version\":\"1\",\"input\":{\"operation\":\"update\",\"value\":\"new-value\"},\"tenant_id\":\"tenant-a\",\"tool_contract_version\":\"1\",\"tool_id\":\"external_operation\"}",
+    "expected_effect_id": "mycelium:effect:v1:7f4edcab15bb20edfe47096053db3fd16ccaa6db478cc7290011a55b555ddac3"
+  },
+  "cases": [
+    {"name": "different-object-key-order", "variant": "same preimage with different insertion order", "expected": "same-as-base", "why": "JCS orders object keys."},
+    {"name": "different-dispatch-id", "variant": "same preimage plus dispatch_id=dispatch-99", "expected": "same-as-base", "why": "Dispatch is delivery metadata and is excluded. Deliberate change from current Python."},
+    {"name": "different-run-id", "variant": "same preimage plus run_id=run-99", "expected": "same-as-base", "why": "Run is correlation/scope metadata, not logical effect identity in the wire protocol."},
+    {"name": "different-trace-id", "variant": "same preimage plus trace_id=trace-99", "expected": "same-as-base", "why": "Tracing metadata is excluded from identity."},
+    {"name": "different-agent", "variant": "same preimage with agent_id=agent.other", "expected": "same-as-base", "why": "Agent is authenticated provenance, not wire effect identity."},
+    {"name": "different-application", "variant": "same preimage with application_id=app.other", "expected": "different-effect", "expected_effect_id": "mycelium:effect:v1:d6538d56e1da73bdaaee3d92167cf685ae212d1705f1d8a93f9aa0102daab49a", "why": "Application identity separates independently authorized producers."},
+    {"name": "changed-meaningful-input", "identity_preimage": {"application_id": "app.example", "business_request_id": "request-884", "canonicalization_version": "jcs-1", "destination": {"id": "record-9", "kind": "record"}, "execution_scope": {"entity": "record-9", "tenant": "tenant-a"}, "identity_version": "1", "input": {"operation": "update", "value": "other-value"}, "tenant_id": "tenant-a", "tool_contract_version": "1", "tool_id": "external_operation"}, "expected_effect_id": "mycelium:effect:v1:4e12e6143af5979ca4a6d7ebdb291dba2cec1ee98af2fb15278131544568ed25", "expected": "different-effect", "why": "Meaningful input changed. A host request alias collision must additionally be reported as ARGUMENT_DRIFT."},
+    {"name": "changed-destination", "identity_preimage": {"application_id": "app.example", "business_request_id": "request-884", "canonicalization_version": "jcs-1", "destination": {"id": "record-10", "kind": "record"}, "execution_scope": {"entity": "record-10", "tenant": "tenant-a"}, "identity_version": "1", "input": {"operation": "update", "value": "new-value"}, "tenant_id": "tenant-a", "tool_contract_version": "1", "tool_id": "external_operation"}, "expected_effect_id": "mycelium:effect:v1:8d052ff0d82b2c10aae8a387f70185161395f46d5c7c9ac9e87b6c12fe29e426", "expected": "different-effect", "why": "Destination is identity and authorization relevant."},
+    {"name": "changed-tool", "identity_preimage": {"application_id": "app.example", "business_request_id": "request-884", "canonicalization_version": "jcs-1", "destination": {"id": "record-9", "kind": "record"}, "execution_scope": {"entity": "record-9", "tenant": "tenant-a"}, "identity_version": "1", "input": {"operation": "update", "value": "new-value"}, "tenant_id": "tenant-a", "tool_contract_version": "1", "tool_id": "other_operation"}, "expected_effect_id": "mycelium:effect:v1:c8f1507a7596e105827a05d731d6e7b7b298428475360b04d36d6b34d64ef338", "expected": "different-effect", "why": "Tool identity separates operations."},
+    {"name": "changed-tenant", "identity_preimage": {"application_id": "app.example", "business_request_id": "request-884", "canonicalization_version": "jcs-1", "destination": {"id": "record-9", "kind": "record"}, "execution_scope": {"entity": "record-9", "tenant": "tenant-b"}, "identity_version": "1", "input": {"operation": "update", "value": "new-value"}, "tenant_id": "tenant-b", "tool_contract_version": "1", "tool_id": "external_operation"}, "expected_effect_id": "mycelium:effect:v1:2bfbff96d8441204d94af5834899189429459a8f0e1772eb9190db8d97546f65", "expected": "different-effect", "why": "Tenant isolation must prevent cross-tenant identity collisions."},
+    {"name": "changed-contract-version", "variant": "same preimage with tool_contract_version=2", "expected": "different-effect", "expected_effect_id": "mycelium:effect:v1:de5e34fb7fe1db08d8db9a9e64a1359709edb6af08a1cee127d90255ab9ee3fc", "why": "A contract version change is a new identity namespace and requires explicit migration."},
+    {"name": "changed-business-request", "identity_preimage": {"application_id": "app.example", "business_request_id": "request-885", "canonicalization_version": "jcs-1", "destination": {"id": "record-9", "kind": "record"}, "execution_scope": {"entity": "record-9", "tenant": "tenant-a"}, "identity_version": "1", "input": {"operation": "update", "value": "new-value"}, "tenant_id": "tenant-a", "tool_contract_version": "1", "tool_id": "external_operation"}, "expected_effect_id": "mycelium:effect:v1:329d9259c3f4afa760104f6a2bb5384ee733f4239670782a83b2381a554bedd0", "expected": "different-effect", "why": "Business request identity distinguishes two otherwise identical intended operations."},
+    {"name": "changed-policy-version", "variant": "same preimage plus policy_version=policy-13", "expected": "same-as-base", "why": "Policy changes must not silently create a second effect; the engine revalidates policy compatibility separately."},
+    {"name": "provider-key-change", "variant": "same preimage plus a different provider key", "expected": "same-as-base", "why": "The current provider-key gate owns key comparison; the provider key is not logical effect identity."},
+    {"name": "prohibited-resolved-secret", "variant": "input contains resolved credential material", "expected": "error:SECRET_VALUE_PROHIBITED", "why": "Secrets must not enter the identity preimage."}
+  ]
+}

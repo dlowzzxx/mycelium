@@ -1,0 +1,332 @@
+{
+  "fixture_version": "jcs-1",
+  "description": "Static canonical JSON vectors for identity-bearing values. Canonical JSON text is UTF-8; expected_utf8_base64 is the exact byte sequence.",
+  "rules": {
+    "standard": "RFC 8785 JSON Canonicalization Scheme",
+    "unicode_normalization": "none at the universal layer; typed fields must declare their own normalization",
+    "negative_zero": "rejected before canonicalization",
+    "non_finite_numbers": "rejected",
+    "decimal": "decimal-1 tagged object with ASCII normalized value, max 38 total digits and scale 18; reject noncanonical forms",
+    "url": "url-1 tagged absolute http/https value; lowercase scheme and DNS host only, preserve path/query/port/trailing slash",
+    "missing_vs_null": "missing property is omitted; explicit null is retained"
+  },
+  "cases": [
+    {
+      "name": "object-key-order",
+      "purpose": "Object insertion order does not affect canonical bytes.",
+      "input_a": {
+        "b": 2,
+        "a": 1
+      },
+      "input_b": {
+        "a": 1,
+        "b": 2
+      },
+      "expected_canonical_json": "{\"a\":1,\"b\":2}",
+      "expected_utf8_base64": "eyJhIjoxLCJiIjoyfQ==",
+      "expected": "valid",
+      "rule": "Sort object keys by RFC 8785 ordering."
+    },
+    {
+      "name": "nested-values",
+      "purpose": "Canonicalization recurses through objects and preserves array order.",
+      "input": {
+        "list": [
+          3,
+          "x"
+        ],
+        "a": {
+          "z": null,
+          "x": true
+        }
+      },
+      "expected_canonical_json": "{\"a\":{\"x\":true,\"z\":null},\"list\":[3,\"x\"]}",
+      "expected_utf8_base64": "eyJhIjp7IngiOnRydWUsInoiOm51bGx9LCJsaXN0IjpbMywieCJdfQ==",
+      "expected": "valid",
+      "rule": "Sort object keys recursively; never sort arrays implicitly."
+    },
+    {
+      "name": "unicode-and-escapes",
+      "purpose": "Unicode is UTF-8 and control/quote characters use JSON escaping.",
+      "input": {
+        "quote": "\"",
+        "cafe": "café",
+        "newline": "line\nnext"
+      },
+      "expected_canonical_json": "{\"cafe\":\"café\",\"newline\":\"line\\nnext\",\"quote\":\"\\\"\"}",
+      "expected_utf8_base64": "eyJjYWZlIjoiY2Fmw6kiLCJuZXdsaW5lIjoibGluZVxubmV4dCIsInF1b3RlIjoiXCIifQ==",
+      "expected": "valid",
+      "rule": "Do not apply universal Unicode normalization; encode canonical text as UTF-8."
+    },
+    {
+      "name": "explicit-null",
+      "purpose": "Null is distinct from an omitted property.",
+      "input": {
+        "value": null
+      },
+      "expected_canonical_json": "{\"value\":null}",
+      "expected_utf8_base64": "eyJ2YWx1ZSI6bnVsbH0=",
+      "expected": "valid",
+      "rule": "An explicit null participates in the input; a missing optional field does not."
+    },
+    {
+      "name": "integer-range",
+      "purpose": "Signed integers retain their exact mathematical value.",
+      "input": {
+        "negative": -42,
+        "positive": 42,
+        "zero": 0
+      },
+      "expected_canonical_json": "{\"negative\":-42,\"positive\":42,\"zero\":0}",
+      "expected_utf8_base64": "eyJuZWdhdGl2ZSI6LTQyLCJwb3NpdGl2ZSI6NDIsInplcm8iOjB9",
+      "expected": "valid",
+      "rule": "Use integers within the protocol's declared safe range; reject overflow."
+    },
+    {
+      "name": "opaque-numeric-string",
+      "purpose": "An ordinary string is not implicitly interpreted as a decimal.",
+      "input": {
+        "amount": "10.50",
+        "unit": "USD"
+      },
+      "expected_canonical_json": "{\"amount\":\"10.50\",\"unit\":\"USD\"}",
+      "expected_utf8_base64": "eyJhbW91bnQiOiIxMC41MCIsInVuaXQiOiJVU0QifQ==",
+      "expected": "valid",
+      "rule": "Only a tagged decimal-1 value is an exact decimal; ordinary strings remain application data."
+    },
+    {
+      "name": "timestamp-string",
+      "purpose": "Timestamps use an explicit UTC representation.",
+      "input": {
+        "at": "2026-09-03T10:20:30.000Z"
+      },
+      "expected_canonical_json": "{\"at\":\"2026-09-03T10:20:30.000Z\"}",
+      "expected_utf8_base64": "eyJhdCI6IjIwMjYtMDktMDNUMTA6MjA6MzAuMDAwWiJ9",
+      "expected": "valid",
+      "rule": "Typed timestamp fields require RFC 3339 UTC and fixed precision."
+    },
+    {
+      "name": "array-ordering",
+      "purpose": "Arrays are ordered sequences, not sets.",
+      "input": [
+        "first",
+        "second"
+      ],
+      "expected_canonical_json": "[\"first\",\"second\"]",
+      "expected_utf8_base64": "WyJmaXJzdCIsInNlY29uZCJd",
+      "expected": "valid",
+      "rule": "A tool contract must sort a logical set before it enters identity-bearing input."
+    },
+    {
+      "name": "negative-zero",
+      "purpose": "Avoid language disagreement about signed zero.",
+      "input": -0.0,
+      "expected": "error",
+      "error_code": "NON_CANONICAL_NUMBER",
+      "rule": "Reject negative zero in identity-bearing input even though JSON.stringify may emit 0."
+    },
+    {
+      "name": "non-finite-number",
+      "purpose": "NaN and infinities are not JSON values.",
+      "input_description": "NaN, +Infinity, or -Infinity",
+      "expected": "error",
+      "error_code": "NON_FINITE_NUMBER",
+      "rule": "Reject before serialization."
+    },
+    {
+      "name": "unsupported-language-object",
+      "purpose": "No implementation-specific string fallback.",
+      "input_description": "Date object, class instance, function, cyclic object, or native byte buffer without an explicit wire representation",
+      "expected": "error",
+      "error_code": "UNSUPPORTED_VALUE_TYPE",
+      "rule": "Require an explicit typed wire representation."
+    },
+    {
+      "name": "duplicate-object-key",
+      "purpose": "Parsers must not silently choose between duplicate members.",
+      "input_description": "Raw JSON text containing duplicate object member names",
+      "expected": "error",
+      "error_code": "DUPLICATE_OBJECT_KEY",
+      "rule": "Reject duplicate keys before canonicalization."
+    },
+    {
+      "name": "decimal-zero",
+      "input": {
+        "$type": "decimal",
+        "value": "0",
+        "profile": "decimal-1"
+      },
+      "expected_canonical_json": "{\"$type\":\"decimal\",\"profile\":\"decimal-1\",\"value\":\"0\"}",
+      "expected_utf8_base64": "eyIkdHlwZSI6ImRlY2ltYWwiLCJwcm9maWxlIjoiZGVjaW1hbC0xIiwidmFsdWUiOiIwIn0=",
+      "expected": "valid"
+    },
+    {
+      "name": "decimal-positive-integer",
+      "input": {
+        "$type": "decimal",
+        "value": "1500",
+        "profile": "decimal-1"
+      },
+      "expected_canonical_json": "{\"$type\":\"decimal\",\"profile\":\"decimal-1\",\"value\":\"1500\"}",
+      "expected_utf8_base64": "eyIkdHlwZSI6ImRlY2ltYWwiLCJwcm9maWxlIjoiZGVjaW1hbC0xIiwidmFsdWUiOiIxNTAwIn0=",
+      "expected": "valid"
+    },
+    {
+      "name": "decimal-negative-integer",
+      "input": {
+        "$type": "decimal",
+        "value": "-42",
+        "profile": "decimal-1"
+      },
+      "expected_canonical_json": "{\"$type\":\"decimal\",\"profile\":\"decimal-1\",\"value\":\"-42\"}",
+      "expected_utf8_base64": "eyIkdHlwZSI6ImRlY2ltYWwiLCJwcm9maWxlIjoiZGVjaW1hbC0xIiwidmFsdWUiOiItNDIifQ==",
+      "expected": "valid"
+    },
+    {
+      "name": "decimal-positive-fraction",
+      "input": {
+        "$type": "decimal",
+        "value": "1500.25",
+        "profile": "decimal-1"
+      },
+      "expected_canonical_json": "{\"$type\":\"decimal\",\"profile\":\"decimal-1\",\"value\":\"1500.25\"}",
+      "expected_utf8_base64": "eyIkdHlwZSI6ImRlY2ltYWwiLCJwcm9maWxlIjoiZGVjaW1hbC0xIiwidmFsdWUiOiIxNTAwLjI1In0=",
+      "expected": "valid"
+    },
+    {
+      "name": "decimal-negative-fraction",
+      "input": {
+        "$type": "decimal",
+        "value": "-0.25",
+        "profile": "decimal-1"
+      },
+      "expected_canonical_json": "{\"$type\":\"decimal\",\"profile\":\"decimal-1\",\"value\":\"-0.25\"}",
+      "expected_utf8_base64": "eyIkdHlwZSI6ImRlY2ltYWwiLCJwcm9maWxlIjoiZGVjaW1hbC0xIiwidmFsdWUiOiItMC4yNSJ9",
+      "expected": "valid"
+    },
+    {
+      "name": "decimal-noncanonical-forms",
+      "invalid_inputs": [
+        "01",
+        "1.0",
+        "1e3",
+        "+1",
+        "-0",
+        " 1",
+        "1,000",
+        "123456789012345678901234567890123456789",
+        "0.1234567890123456789"
+      ],
+      "expected": "error",
+      "error_code": "NON_CANONICAL_DECIMAL",
+      "rule": "Require decimal-1 normalized form; do not silently normalize."
+    },
+    {
+      "name": "url-scheme-host",
+      "input": {
+        "$type": "url",
+        "value": "https://example.com/resource",
+        "profile": "url-1"
+      },
+      "expected_canonical_json": "{\"$type\":\"url\",\"profile\":\"url-1\",\"value\":\"https://example.com/resource\"}",
+      "expected_utf8_base64": "eyIkdHlwZSI6InVybCIsInByb2ZpbGUiOiJ1cmwtMSIsInZhbHVlIjoiaHR0cHM6Ly9leGFtcGxlLmNvbS9yZXNvdXJjZSJ9",
+      "expected": "valid",
+      "normalization_note": "HTTPS://EXAMPLE.COM/resource is normalized to this value before JCS.",
+      "rule": "Lowercase scheme and DNS host only."
+    },
+    {
+      "name": "url-path-query-preservation",
+      "input": {
+        "$type": "url",
+        "value": "https://example.com/a/B?x=1&x=2",
+        "profile": "url-1"
+      },
+      "expected_canonical_json": "{\"$type\":\"url\",\"profile\":\"url-1\",\"value\":\"https://example.com/a/B?x=1&x=2\"}",
+      "expected_utf8_base64": "eyIkdHlwZSI6InVybCIsInByb2ZpbGUiOiJ1cmwtMSIsInZhbHVlIjoiaHR0cHM6Ly9leGFtcGxlLmNvbS9hL0I/eD0xJng9MiJ9",
+      "expected": "valid",
+      "rule": "Preserve path case, query order, and repeated parameters."
+    },
+    {
+      "name": "url-port-trailing-slash",
+      "input": {
+        "$type": "url",
+        "value": "https://example.com:8443/resource/",
+        "profile": "url-1"
+      },
+      "expected_canonical_json": "{\"$type\":\"url\",\"profile\":\"url-1\",\"value\":\"https://example.com:8443/resource/\"}",
+      "expected_utf8_base64": "eyIkdHlwZSI6InVybCIsInByb2ZpbGUiOiJ1cmwtMSIsInZhbHVlIjoiaHR0cHM6Ly9leGFtcGxlLmNvbTo4NDQzL3Jlc291cmNlLyJ9",
+      "expected": "valid",
+      "rule": "Preserve explicit ports and trailing slash distinctions."
+    },
+    {
+      "name": "url-rejected-forms",
+      "invalid_inputs": [
+        "/relative",
+        "https://user:pass@example.com/x",
+        "https://example.com/x#fragment",
+        "https://example.com/x\u0001",
+        "ftp://example.com/x",
+        "HTTPS://EXAMPLE.COM/x"
+      ],
+      "expected": "error",
+      "error_code": "INVALID_URL",
+      "rule": "Reject rather than apply provider-specific normalization."
+    },
+    {
+      "name": "empty-values",
+      "purpose": "Empty values have stable, distinct forms.",
+      "input": {
+        "empty_array": [],
+        "empty_object": {},
+        "empty_string": ""
+      },
+      "expected_canonical_json": "{\"empty_array\":[],\"empty_object\":{},\"empty_string\":\"\"}",
+      "expected_utf8_base64": "eyJlbXB0eV9hcnJheSI6W10sImVtcHR5X29iamVjdCI6e30sImVtcHR5X3N0cmluZyI6IiJ9",
+      "expected": "valid",
+      "rule": "Do not omit or stringify empty JSON values."
+    },
+    {
+      "name": "safe-integer-boundaries",
+      "purpose": "Cross-language integer boundaries are explicit.",
+      "input": {
+        "max": 9007199254740991,
+        "min": -9007199254740991
+      },
+      "expected_canonical_json": "{\"max\":9007199254740991,\"min\":-9007199254740991}",
+      "expected_utf8_base64": "eyJtYXgiOjkwMDcxOTkyNTQ3NDA5OTEsIm1pbiI6LTkwMDcxOTkyNTQ3NDA5OTF9",
+      "expected": "valid",
+      "rule": "Use the inclusive IEEE-754 safe-integer range."
+    },
+    {
+      "name": "integer-out-of-range",
+      "purpose": "Integers that JavaScript cannot represent exactly are rejected.",
+      "input_description": "9007199254740992 or -9007199254740992",
+      "expected": "error",
+      "error_code": "INTEGER_OUT_OF_RANGE",
+      "rule": "Use a decimal string or an application-defined encoded representation instead."
+    },
+    {
+      "name": "malformed-unicode",
+      "purpose": "Unpaired UTF-16 surrogates are not silently encoded.",
+      "input_description": "A string containing an unpaired high or low surrogate",
+      "expected": "error",
+      "error_code": "INVALID_UNICODE",
+      "rule": "Require valid Unicode scalar values before UTF-8 encoding."
+    },
+    {
+      "name": "preimage-at-limit",
+      "purpose": "The size boundary is measured after canonicalization and before the domain prefix.",
+      "input_description": "A valid identity preimage whose canonical UTF-8 representation is exactly 65536 bytes",
+      "expected": "valid",
+      "rule": "The engine accepts canonical identity-preimage UTF-8 length <= 65536 bytes."
+    },
+    {
+      "name": "preimage-over-limit",
+      "purpose": "Oversized identity input fails before claim.",
+      "input_description": "A valid identity preimage whose canonical UTF-8 representation is 65537 bytes",
+      "expected": "error",
+      "error_code": "IDENTITY_PREIMAGE_TOO_LARGE",
+      "rule": "The 64 KiB limit excludes the domain prefix and applies to canonical UTF-8 bytes."
+    }
+  ]
+}
