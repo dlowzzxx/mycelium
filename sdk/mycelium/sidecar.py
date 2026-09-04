@@ -45,129 +45,742 @@ TOKEN_BYTES = 43  # base64url encoding of 256 random bits
 
 
 def openapi_document() -> dict[str, Any]:
-    """Return the small, language-neutral OpenAPI description for this adapter."""
+    """Return the deterministic, language-neutral sidecar contract."""
+
+    def ref(name: str) -> dict[str, str]:
+        return {"$ref": f"#/components/schemas/{name}"}
+
+    def string(pattern: str | None = None, max_length: int = 1024) -> dict[str, Any]:
+        value: dict[str, Any] = {"type": "string", "minLength": 1, "maxLength": max_length}
+        if pattern:
+            value["pattern"] = pattern
+        return value
+
+    json_value: dict[str, Any] = {
+        "oneOf": [
+            {"type": ["string", "boolean", "null"]},
+            {"type": "integer", "minimum": -(2**53 - 1), "maximum": 2**53 - 1},
+            {"type": "array", "items": {"$ref": "#/components/schemas/JsonValue"}},
+            ref("JsonObject"),
+            ref("DecimalValue"),
+            ref("UrlValue"),
+        ],
+        "description": "Raw floating-point values are rejected by the engine.",
+    }
+    identity_properties = {
+        "application_id": ref("ApplicationId"),
+        "business_request_id": ref("BusinessRequestId"),
+        "canonicalization_version": ref("CanonicalizationVersion"),
+        "destination": {"anyOf": [ref("Destination"), {"type": "null"}]},
+        "execution_scope": ref("ExecutionScope"),
+        "identity_version": ref("IdentityVersion"),
+        "input": ref("IdentityInput"),
+        "tenant_id": ref("TenantId"),
+        "tool_contract_version": ref("ToolContractVersion"),
+        "tool_id": ref("ToolId"),
+        "expected_effect_id": {**ref("EffectId"), "description": "Client assertion only."},
+    }
+    identity_required = [
+        "application_id",
+        "business_request_id",
+        "canonicalization_version",
+        "destination",
+        "execution_scope",
+        "identity_version",
+        "input",
+        "tenant_id",
+        "tool_contract_version",
+        "tool_id",
+    ]
+    fenced_properties = {"owner_id": ref("OwnerId"), "fence": ref("Fence")}
+    schemas: dict[str, Any] = {
+        "ProtocolVersion": {"type": "string", "const": PROTOCOL_VERSION},
+        "IdentityVersion": {"type": "string", "const": IDENTITY_VERSION},
+        "CanonicalizationVersion": {"type": "string", "const": CANONICALIZATION_VERSION},
+        "EffectId": {"type": "string", "pattern": r"^mycelium:effect:v1:[0-9a-f]{64}$"},
+        "TenantId": string(),
+        "ApplicationId": string(),
+        "AgentId": string(),
+        "BusinessRequestId": string(),
+        "ToolId": string(),
+        "ToolContractVersion": string(),
+        "OwnerId": string(),
+        "Fence": {"type": "integer", "minimum": 1, "maximum": 2**63 - 1},
+        "JsonValue": json_value,
+        "JsonObject": {
+            "type": "object",
+            "properties": {"$type": {"type": "string"}},
+            "additionalProperties": ref("JsonValue"),
+            "not": {
+                "required": ["$type"],
+                "properties": {"$type": {"type": "string"}},
+            },
+        },
+        "IdentityInput": {"$ref": "#/components/schemas/JsonValue"},
+        "Destination": {"$ref": "#/components/schemas/JsonObject"},
+        "ExecutionScope": {"$ref": "#/components/schemas/JsonObject"},
+        "DecimalValue": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["$type", "profile", "value"],
+            "properties": {
+                "$type": {"const": "decimal"},
+                "profile": {"const": "decimal-1"},
+                "value": {
+                    "type": "string",
+                    "pattern": r"^(0|-?[1-9][0-9]*)(\.[0-9]*[1-9])?$",
+                    "maxLength": 40,
+                },
+            },
+            "description": "Engine additionally enforces 38 total digits and scale 18.",
+        },
+        "UrlValue": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["$type", "profile", "value"],
+            "properties": {
+                "$type": {"const": "url"},
+                "profile": {"const": "url-1"},
+                "value": {"type": "string", "minLength": 1, "maxLength": 4096},
+            },
+            "description": "Engine enforces the absolute HTTP(S), credential-free url-1 profile.",
+        },
+        "Decision": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["allowed", "verdicts", "denied_reasons"],
+            "properties": {
+                "allowed": {"type": "boolean"},
+                "verdicts": {"type": "array", "items": ref("Verdict")},
+                "denied_reasons": {"type": "array", "items": {"type": "string"}},
+            },
+        },
+        "Verdict": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["name", "allowed"],
+            "properties": {
+                "name": string(),
+                "allowed": {"type": "boolean"},
+                "reason": {"type": ["string", "null"]},
+            },
+        },
+        "BoundaryState": {"type": "string", "enum": ["not_crossed", "maybe_crossed", "crossed"]},
+        "EffectState": {
+            "type": "string",
+            "enum": ["INTENDED", "ATTEMPTING", "COMMITTED", "ABORTED", "UNKNOWN"],
+        },
+        "Lease": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["leased_until", "last_heartbeat_at"],
+            "properties": {
+                "leased_until": {"type": ["number", "null"]},
+                "last_heartbeat_at": {"type": ["number", "null"]},
+            },
+        },
+        "EffectHandle": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["effect_id", "owner_id", "fence"],
+            "properties": {
+                "effect_id": ref("EffectId"),
+                "owner_id": ref("OwnerId"),
+                "fence": ref("Fence"),
+            },
+        },
+        "ProviderReference": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["provider_operation_ref"],
+            "properties": {"provider_operation_ref": string()},
+        },
+        "RetryClassification": {"type": "string", "enum": ["retryable", "caller_action_required"]},
+        "ClaimDisposition": {
+            "type": "string",
+            "enum": [
+                "EXECUTE",
+                "RETURN_STORED_RESULT",
+                "WAIT_FOR_OWNER",
+                "RECORD_DECISION",
+                "UNKNOWN",
+                "DENIED",
+                "TERMINAL_ABORTED",
+            ],
+        },
+        "HealthReply": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["status", "protocol_version"],
+            "properties": {"status": {"const": "ok"}, "protocol_version": ref("ProtocolVersion")},
+        },
+        "CapabilitiesReply": {
+            "type": "object",
+            "required": [
+                "protocol_version",
+                "identity_namespace",
+                "capabilities",
+                "operations",
+                "development_only",
+            ],
+            "properties": {
+                "protocol_version": ref("ProtocolVersion"),
+                "identity_namespace": {"const": "identity-v1"},
+                "capabilities": {"type": "array", "items": {"type": "string"}},
+                "operations": {"type": "array", "items": {"type": "string"}},
+                "development_only": {"const": True},
+            },
+            "additionalProperties": True,
+        },
+        "DeriveIdentityRequest": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": identity_required,
+            "properties": identity_properties,
+        },
+        "DeriveIdentityReply": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": [
+                "protocol_version",
+                "effect_id",
+                "canonical_json",
+                "canonical_bytes",
+                "identity_namespace",
+            ],
+            "properties": {
+                "protocol_version": ref("ProtocolVersion"),
+                "effect_id": ref("EffectId"),
+                "canonical_json": {"type": "string"},
+                "canonical_bytes": {"type": "integer", "minimum": 1, "maximum": MAX_PREIMAGE_BYTES},
+                "identity_namespace": {"const": "identity-v1"},
+            },
+        },
+        "ClaimEffectRequest": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": identity_required,
+            "properties": {
+                **identity_properties,
+                "decision": ref("Decision"),
+                "lease_ttl": {"type": "number", "exclusiveMinimum": 0},
+            },
+        },
+        "EffectInspectionReply": {
+            "type": "object",
+            "unevaluatedProperties": False,
+            "required": [
+                "protocol_version",
+                "effect_id",
+                "effect_state",
+                "terminal_outcome",
+                "owner_id",
+                "lease",
+                "fence",
+                "provider_boundary",
+                "provider_operation_ref",
+                "result",
+                "decision",
+                "error",
+            ],
+            "properties": {
+                "protocol_version": ref("ProtocolVersion"),
+                "effect_id": ref("EffectId"),
+                "effect_state": ref("EffectState"),
+                "terminal_outcome": {"type": ["string", "null"]},
+                "owner_id": {"anyOf": [ref("OwnerId"), {"type": "null"}]},
+                "lease": ref("Lease"),
+                "fence": {"anyOf": [ref("Fence"), {"type": "null"}]},
+                "provider_boundary": {"anyOf": [ref("BoundaryState"), {"type": "null"}]},
+                "provider_operation_ref": {"type": ["string", "null"]},
+                "result": {},
+                "decision": {"anyOf": [ref("Decision"), {"type": "null"}]},
+                "error": {"type": ["string", "null"]},
+                "disposition": ref("ClaimDisposition"),
+            },
+        },
+        "RenewLeaseRequest": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": [*identity_required, "owner_id", "fence"],
+            "properties": {
+                **identity_properties,
+                **fenced_properties,
+                "lease_ttl": {"type": "number", "exclusiveMinimum": 0},
+            },
+        },
+        "RecordBoundaryRequest": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": [*identity_required, "owner_id", "fence", "boundary"],
+            "properties": {
+                **identity_properties,
+                **fenced_properties,
+                "boundary": ref("BoundaryState"),
+            },
+        },
+        "AttachProviderReferenceRequest": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": [*identity_required, "owner_id", "fence", "provider_operation_ref"],
+            "properties": {
+                **identity_properties,
+                **fenced_properties,
+                "provider_operation_ref": string(),
+            },
+        },
+        "CompleteEffectRequest": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": [*identity_required, "owner_id", "fence"],
+            "properties": {**identity_properties, **fenced_properties, "result": {}},
+        },
+        "FailEffectRequest": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": [*identity_required, "owner_id", "fence"],
+            "properties": {
+                **identity_properties,
+                **fenced_properties,
+                "boundary": ref("BoundaryState"),
+            },
+        },
+        "ReconcileEffectRequest": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": identity_required,
+            "properties": identity_properties,
+        },
+        "ProtocolError": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["protocol_version", "error"],
+            "properties": {
+                "protocol_version": ref("ProtocolVersion"),
+                "error": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": [
+                        "code",
+                        "message",
+                        "retryable",
+                        "caller_action_required",
+                        "state_may_have_changed",
+                        "effect_may_have_happened",
+                    ],
+                    "properties": {
+                        "code": {
+                            "type": "string",
+                            "enum": [
+                                "INVALID_REQUEST",
+                                "INVALID_JSON",
+                                "DUPLICATE_OBJECT_KEY",
+                                "REQUEST_TOO_LARGE",
+                                "RESPONSE_TOO_LARGE",
+                                "NOT_FOUND",
+                                "AUTHENTICATION_REQUIRED",
+                                "AUTHENTICATION_INVALID",
+                                "TENANT_MISMATCH",
+                                "APPLICATION_MISMATCH",
+                                "IDENTITY_REQUIRED",
+                                "EFFECT_ID_MISMATCH",
+                                "UNSUPPORTED_IDENTITY_VERSION",
+                                "UNSUPPORTED_CANONICALIZATION_VERSION",
+                                "IDENTITY_PREIMAGE_TOO_LARGE",
+                                "UNSUPPORTED_VALUE_TYPE",
+                                "NON_FINITE_NUMBER",
+                                "NON_CANONICAL_NUMBER",
+                                "INTEGER_OUT_OF_RANGE",
+                                "INVALID_UNICODE",
+                                "NON_CANONICAL_DECIMAL",
+                                "INVALID_DECIMAL",
+                                "INVALID_URL",
+                                "OWNER_REQUIRED",
+                                "FENCE_REQUIRED",
+                                "ACTIVE_OWNER",
+                                "STALE_FENCE",
+                                "LEASE_LOST",
+                                "INVALID_TRANSITION",
+                                "POLICY_DENIED",
+                                "RECONCILIATION_UNAVAILABLE",
+                                "INTERNAL_PROTOCOL_ERROR",
+                            ],
+                        },
+                        "message": {"type": "string"},
+                        "retryable": {"type": "boolean"},
+                        "caller_action_required": {"type": "boolean"},
+                        "state_may_have_changed": {"type": "boolean"},
+                        "effect_may_have_happened": {"type": "boolean"},
+                        "effect_id": ref("EffectId"),
+                        "details": {"type": "object"},
+                    },
+                },
+            },
+        },
+    }
+    for response_name in (
+        "RenewLeaseReply",
+        "RecordBoundaryReply",
+        "AttachProviderReferenceReply",
+        "CompleteEffectReply",
+        "FailEffectReply",
+    ):
+        schemas[response_name] = {"$ref": "#/components/schemas/EffectInspectionReply"}
+    projection = ref("EffectInspectionReply")
+    disposition_schemas = {}
+    for name, value in (
+        ("ExecuteDisposition", "EXECUTE"),
+        ("StoredResultDisposition", "RETURN_STORED_RESULT"),
+        ("WaitForOwnerDisposition", "WAIT_FOR_OWNER"),
+        ("RecordDecisionDisposition", "RECORD_DECISION"),
+        ("UnknownDisposition", "UNKNOWN"),
+        ("DeniedDisposition", "DENIED"),
+        ("TerminalAbortedDisposition", "TERMINAL_ABORTED"),
+    ):
+        disposition_schemas[name] = {
+            "allOf": [
+                projection,
+                {
+                    "type": "object",
+                    "required": ["disposition"],
+                    "properties": {"disposition": {"const": value}},
+                },
+            ]
+        }
+    disposition_schemas["ExecuteDisposition"]["allOf"][1]["required"] = [
+        "disposition",
+        "owner_id",
+        "fence",
+        "lease",
+    ]
+    schemas.update(disposition_schemas)
+    claim_union = {
+        "oneOf": [ref(name) for name in disposition_schemas],
+        "discriminator": {
+            "propertyName": "disposition",
+            "mapping": {
+                value: f"#/components/schemas/{name}"
+                for name, value in (
+                    ("ExecuteDisposition", "EXECUTE"),
+                    ("StoredResultDisposition", "RETURN_STORED_RESULT"),
+                    ("WaitForOwnerDisposition", "WAIT_FOR_OWNER"),
+                    ("RecordDecisionDisposition", "RECORD_DECISION"),
+                    ("UnknownDisposition", "UNKNOWN"),
+                    ("DeniedDisposition", "DENIED"),
+                    ("TerminalAbortedDisposition", "TERMINAL_ABORTED"),
+                )
+            },
+        },
+    }
+    schemas["ClaimEffectReply"] = claim_union
+    schemas["EffectHandle"] = {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["effect_id", "owner_id", "fence"],
+        "properties": {
+            "effect_id": ref("EffectId"),
+            "owner_id": ref("OwnerId"),
+            "fence": ref("Fence"),
+        },
+    }
+
+    def response(schema: str, description: str) -> dict[str, Any]:
+        error_response = {
+            "description": "Protocol error",
+            "content": {"application/json": {"schema": ref("ProtocolError")}},
+        }
+        return {
+            "400": error_response,
+            "401": error_response,
+            "403": error_response,
+            "404": error_response,
+            "409": error_response,
+            "413": error_response,
+            "415": error_response,
+            "500": error_response,
+            "200": {
+                "description": description,
+                "content": {"application/json": {"schema": ref(schema)}},
+            },
+            "default": {
+                "description": "Protocol error",
+                "content": {"application/json": {"schema": ref("ProtocolError")}},
+            },
+        }
+
+    def body(schema: str) -> dict[str, Any]:
+        return {"required": True, "content": {"application/json": {"schema": ref(schema)}}}
+
+    def post(schema: str, result: str, operation_id: str) -> dict[str, Any]:
+        return {
+            "post": {
+                "operationId": operation_id,
+                "summary": operation_id,
+                "security": [{"bearerAuth": []}],
+                "requestBody": body(schema),
+                "responses": response(result, operation_id),
+            }
+        }
+
     paths = {
         "/health": {
-            "get": {"security": [], "responses": {"200": {"description": "Process health"}}}
+            "get": {
+                "operationId": "getHealth",
+                "summary": "Get process health",
+                "security": [],
+                "responses": response("HealthReply", "Health"),
+            }
         },
         "/v1/openapi.json": {
             "get": {
+                "operationId": "getOpenApiDocument",
+                "summary": "Get the OpenAPI contract",
                 "security": [{"bearerAuth": []}],
-                "responses": {"200": {"description": "This OpenAPI document"}},
+                "responses": response("OpenApiDocument", "OpenAPI document"),
             }
         },
         "/v1/capabilities": {
             "get": {
+                "operationId": "getCapabilities",
+                "summary": "Get sidecar capabilities",
                 "security": [{"bearerAuth": []}],
-                "responses": {"200": {"description": "Capabilities"}},
+                "responses": response("CapabilitiesReply", "Capabilities"),
             }
         },
-        "/v1/identities/derive": {
-            "post": {
-                "security": [{"bearerAuth": []}],
-                "responses": {"200": {"description": "Derived identity"}},
-            }
-        },
-        "/v1/effects/claim": {
-            "post": {
-                "security": [{"bearerAuth": []}],
-                "responses": {"200": {"description": "Claim disposition"}},
-            }
-        },
+        "/v1/identities/derive": post(
+            "DeriveIdentityRequest", "DeriveIdentityReply", "deriveEffectIdentity"
+        ),
+        "/v1/effects/claim": post("ClaimEffectRequest", "ClaimEffectReply", "claimEffect"),
     }
-    for action in ("renew", "boundary", "provider-reference", "reconcile", "complete", "fail"):
-        paths[f"/v1/effects/{{effect_id}}/{action}"] = {
-            "post": {
-                "security": [{"bearerAuth": []}],
-                "responses": {"200": {"description": "Ledger projection"}},
-            }
-        }
+    for action, schema, operation_id in (
+        ("renew", "RenewLeaseRequest", "renewEffectLease"),
+        ("boundary", "RecordBoundaryRequest", "recordEffectBoundary"),
+        ("provider-reference", "AttachProviderReferenceRequest", "attachProviderReference"),
+        ("reconcile", "ReconcileEffectRequest", "reconcileEffect"),
+        ("complete", "CompleteEffectRequest", "completeEffect"),
+        ("fail", "FailEffectRequest", "failEffect"),
+    ):
+        item = post(
+            schema,
+            "EffectInspectionReply" if action != "reconcile" else "ReconcileEffectReply",
+            operation_id,
+        )
+        item["post"]["parameters"] = [
+            {"name": "effect_id", "in": "path", "required": True, "schema": ref("EffectId")}
+        ]
+        item["post"]["responses"] = response(
+            {
+                "renew": "RenewLeaseReply",
+                "boundary": "RecordBoundaryReply",
+                "provider-reference": "AttachProviderReferenceReply",
+                "reconcile": "ReconcileEffectReply",
+                "complete": "CompleteEffectReply",
+                "fail": "FailEffectReply",
+            }[action],
+            operation_id,
+        )
+        paths[f"/v1/effects/{{effect_id}}/{action}"] = item
     paths["/v1/effects/{effect_id}"] = {
         "get": {
+            "operationId": "getEffect",
+            "summary": "Inspect an effect",
             "security": [{"bearerAuth": []}],
-            "responses": {"200": {"description": "Ledger projection"}},
+            "parameters": [
+                {"name": "effect_id", "in": "path", "required": True, "schema": ref("EffectId")}
+            ],
+            "responses": response("EffectInspectionReply", "Effect inspection"),
         }
     }
-    for path_item in paths.values():
-        if "post" in path_item:
-            path_item["post"]["requestBody"] = {
-                "required": True,
-                "content": {
-                    "application/json": {
-                        "schema": {"$ref": "#/components/schemas/JsonObject"}
-                    }
-                },
-            }
+    schemas["ReconcileEffectReply"] = {
+        "allOf": [
+            ref("EffectInspectionReply"),
+            {
+                "type": "object",
+                "required": ["reconciliation"],
+                "properties": {"reconciliation": {"const": "authoritative-engine-result"}},
+            },
+        ]
+    }
+    effect_example = "mycelium:effect:v1:" + "0" * 64
+    schemas["DecimalValue"]["examples"] = [
+        {"$type": "decimal", "profile": "decimal-1", "value": "1500.25"}
+    ]
+    schemas["UrlValue"]["examples"] = [
+        {"$type": "url", "profile": "url-1", "value": "https://example.com/resource"}
+    ]
+    schemas["HealthReply"]["examples"] = [{"status": "ok", "protocol_version": PROTOCOL_VERSION}]
+    schemas["CapabilitiesReply"]["examples"] = [
+        {
+            "protocol_version": PROTOCOL_VERSION,
+            "identity_namespace": "identity-v1",
+            "capabilities": ["effects", "identity", "capabilities"],
+            "operations": ["claim_effect", "complete_effect"],
+            "development_only": True,
+        }
+    ]
+    identity_example = {
+        "application_id": "app-a",
+        "business_request_id": "request-123",
+        "canonicalization_version": CANONICALIZATION_VERSION,
+        "destination": {"resource_id": "resource-42"},
+        "execution_scope": {"environment": "development"},
+        "identity_version": IDENTITY_VERSION,
+        "input": {"status": "active"},
+        "tenant_id": "tenant-a",
+        "tool_contract_version": "1",
+        "tool_id": "resource.update",
+    }
+    schemas["DeriveIdentityRequest"]["examples"] = [identity_example]
+    schemas["DeriveIdentityReply"]["examples"] = [
+        {
+            "protocol_version": PROTOCOL_VERSION,
+            "effect_id": effect_example,
+            "canonical_json": "{}",
+            "canonical_bytes": 2,
+            "identity_namespace": "identity-v1",
+        }
+    ]
+    schemas["ClaimEffectRequest"]["examples"] = [
+        {**identity_example, "decision": {"allowed": True, "verdicts": [], "denied_reasons": []}}
+    ]
+    for name, extra in (
+        ("RenewLeaseRequest", {"owner_id": "sidecar-owner", "fence": 1}),
+        (
+            "RecordBoundaryRequest",
+            {"owner_id": "sidecar-owner", "fence": 1, "boundary": "maybe_crossed"},
+        ),
+        (
+            "AttachProviderReferenceRequest",
+            {"owner_id": "sidecar-owner", "fence": 1, "provider_operation_ref": "provider-op-42"},
+        ),
+        (
+            "CompleteEffectRequest",
+            {"owner_id": "sidecar-owner", "fence": 1, "result": {"ok": True}},
+        ),
+        (
+            "FailEffectRequest",
+            {"owner_id": "sidecar-owner", "fence": 1, "boundary": "maybe_crossed"},
+        ),
+        ("ReconcileEffectRequest", {}),
+    ):
+        schemas[name]["examples"] = [{**identity_example, **extra}]
+    projection_example = {
+        "protocol_version": PROTOCOL_VERSION,
+        "effect_id": effect_example,
+        "effect_state": "ATTEMPTING",
+        "terminal_outcome": "in_flight",
+        "owner_id": "sidecar-owner",
+        "lease": {"leased_until": 123.0, "last_heartbeat_at": 122.0},
+        "fence": 1,
+        "provider_boundary": "not_crossed",
+        "provider_operation_ref": None,
+        "result": None,
+        "decision": {"allowed": True, "verdicts": [], "denied_reasons": []},
+        "error": None,
+    }
+    for name, disposition in (
+        ("ExecuteDisposition", "EXECUTE"),
+        ("StoredResultDisposition", "RETURN_STORED_RESULT"),
+        ("WaitForOwnerDisposition", "WAIT_FOR_OWNER"),
+        ("RecordDecisionDisposition", "RECORD_DECISION"),
+        ("UnknownDisposition", "UNKNOWN"),
+        ("DeniedDisposition", "DENIED"),
+        ("TerminalAbortedDisposition", "TERMINAL_ABORTED"),
+    ):
+        schemas[name]["examples"] = [{**projection_example, "disposition": disposition}]
+    schemas["ProtocolError"]["examples"] = [
+        {
+            "protocol_version": PROTOCOL_VERSION,
+            "error": {
+                "code": "STALE_FENCE",
+                "message": "ledger rejected the fenced operation",
+                "retryable": False,
+                "caller_action_required": True,
+                "state_may_have_changed": True,
+                "effect_may_have_happened": True,
+                "effect_id": effect_example,
+            },
+        },
+        {
+            "protocol_version": PROTOCOL_VERSION,
+            "error": {
+                "code": "AUTHENTICATION_REQUIRED",
+                "message": "bearer token required",
+                "retryable": False,
+                "caller_action_required": True,
+                "state_may_have_changed": False,
+                "effect_may_have_happened": False,
+            },
+        },
+        {
+            "protocol_version": PROTOCOL_VERSION,
+            "error": {
+                "code": "RECONCILIATION_UNAVAILABLE",
+                "message": "reconciliation could not resolve the effect",
+                "retryable": False,
+                "caller_action_required": True,
+                "state_may_have_changed": True,
+                "effect_may_have_happened": True,
+                "effect_id": effect_example,
+            },
+        },
+    ]
     return {
         "openapi": "3.1.0",
         "info": {
             "title": "Mycelium Development Sidecar",
             "version": PROTOCOL_VERSION,
+            "license": {
+                "name": "Mycelium development-only protocol contract",
+                "identifier": "LicenseRef-Mycelium-Development-Only",
+            },
             "description": (
-                "Development-only, loopback-only JSON adapter. It makes no "
-                "exactly-once or hostile-client guarantee."
+                "Development-only loopback JSON protocol. Python remains authoritative. "
+                "No exactly-once or hostile-client guarantee."
             ),
         },
         "servers": [{"url": "http://127.0.0.1"}],
         "security": [{"bearerAuth": []}],
         "components": {
-            "securitySchemes": {"bearerAuth": {"type": "http", "scheme": "bearer"}},
-            "schemas": {
-                "JsonObject": {"type": "object", "additionalProperties": True},
-                "Error": {
-                    "type": "object",
-                    "required": [
-                        "code",
-                        "message",
-                        "retryable",
-                        "state_may_have_changed",
-                        "effect_may_have_happened",
-                    ],
-                    "properties": {
-                        "code": {"type": "string"},
-                        "message": {"type": "string"},
-                        "retryable": {"type": "boolean"},
-                        "state_may_have_changed": {"type": "boolean"},
-                        "effect_may_have_happened": {"type": "boolean"},
-                        "caller_action_required": {"type": "boolean"},
-                    },
+            "securitySchemes": {
+                "bearerAuth": {
+                    "type": "http",
+                    "scheme": "bearer",
+                    "description": "Local development bearer token in Authorization only.",
                 }
             },
+            "schemas": {
+                **schemas,
+                "OpenApiDocument": {
+                    "type": "object",
+                    "required": ["openapi", "info", "paths"],
+                    "properties": {
+                        "openapi": {"const": "3.1.0"},
+                        "info": {"type": "object"},
+                        "paths": {"type": "object"},
+                    },
+                    "additionalProperties": True,
+                },
+            },
         },
-        "x-stable-error-codes": [
-            "INVALID_REQUEST",
-            "INVALID_JSON",
-            "DUPLICATE_OBJECT_KEY",
-            "REQUEST_TOO_LARGE",
-            "RESPONSE_TOO_LARGE",
-            "NOT_FOUND",
-            "AUTHENTICATION_REQUIRED",
-            "AUTHENTICATION_INVALID",
-            "TENANT_MISMATCH",
-            "APPLICATION_MISMATCH",
-            "IDENTITY_REQUIRED",
-            "EFFECT_ID_MISMATCH",
-            "UNSUPPORTED_IDENTITY_VERSION",
-            "UNSUPPORTED_CANONICALIZATION_VERSION",
-            "IDENTITY_PREIMAGE_TOO_LARGE",
-            "UNSUPPORTED_VALUE_TYPE",
-            "NON_FINITE_NUMBER",
-            "NON_CANONICAL_NUMBER",
-            "INTEGER_OUT_OF_RANGE",
-            "INVALID_UNICODE",
-            "NON_CANONICAL_DECIMAL",
-            "INVALID_DECIMAL",
-            "INVALID_URL",
-            "OWNER_REQUIRED",
-            "FENCE_REQUIRED",
-            "ACTIVE_OWNER",
-            "STALE_FENCE",
-            "LEASE_LOST",
-            "INVALID_TRANSITION",
-            "POLICY_DENIED",
-            "RECONCILIATION_UNAVAILABLE",
-            "INTERNAL_PROTOCOL_ERROR",
-        ],
+        "x-development-only": True,
+        "x-authentication": (
+            "All /v1 routes require Authorization: Bearer. "
+            "/health is the only unauthenticated route."
+        ),
+        "x-error-http-status": {
+            "400": "Malformed or invalid request",
+            "401": "Authentication required or invalid",
+            "403": "Tenant, application, or policy denial",
+            "404": "Effect not found",
+            "409": "Identity, ownership, fence, or transition conflict",
+            "413": "Request or response too large",
+            "415": "Unsupported content type",
+            "500": "Internal protocol error",
+        },
+        "x-stable-error-codes": sorted(
+            schemas["ProtocolError"]["properties"]["error"]["properties"]["code"]["enum"]
+        ),
         "paths": paths,
     }
 
@@ -886,8 +1499,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                     raise SidecarError("NOT_FOUND", "effect not found", status=404)
                 if (
                     entry.kwargs.get("tenant_id") != self._service().config.tenant_id
-                    or entry.kwargs.get("application_id")
-                    != self._service().config.application_id
+                    or entry.kwargs.get("application_id") != self._service().config.application_id
                 ):
                     raise SidecarError("NOT_FOUND", "effect not found", status=404)
                 self._reply({"protocol_version": PROTOCOL_VERSION, **_projection(entry)})

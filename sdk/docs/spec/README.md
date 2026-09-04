@@ -17,6 +17,31 @@
 consequential tools. The Python proof harness in `mycelium.verify.proof` is the
 executable conformance layer; this file is the compact formal sketch.
 
+## OpenAPI contract
+
+The development sidecar serves the machine-readable OpenAPI 3.1 contract at
+`GET /v1/openapi.json`. It is generated directly from `mycelium.sidecar` so the
+served document remains the single transport description. `/health` is the only
+unauthenticated route; every other route uses the local bearer scheme.
+
+The implementation remains authoritative for runtime trust. Generated types do
+not grant ownership, validate a fence, authorize a provider call, or resolve an
+unknown outcome. Clients must fail closed on unknown safety-critical enum values.
+The contract is intentionally development-only and language-neutral:
+
+```text
+TypeScript   Go   Java   Rust   Raw HTTP client
+     \        |    |      |       /
+              v
+       Same Mycelium sidecar protocol
+```
+
+The current OpenAPI is suitable for generator experiments and describes strict
+request shapes, responses, claim dispositions, typed values, and protocol errors.
+A standalone export command is intentionally deferred because the served document
+is the only authoritative copy and does not require sidecar startup for inspection
+of its Python source.
+
 ## Mapping to runtime code
 
 - `Claim` models `ActionLedger.claim_side_effecting()` +
