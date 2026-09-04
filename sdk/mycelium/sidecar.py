@@ -183,6 +183,16 @@ class SidecarError(ValueError):
         self.retryable = retryable
 
 
+def _effect_path_segment(value: str) -> str:
+    try:
+        decoded = urllib.parse.unquote(value, errors="strict")
+    except UnicodeDecodeError as exc:
+        raise SidecarError("INVALID_REQUEST", "effect ID path is invalid") from exc
+    if "/" in decoded or "\\" in decoded:
+        raise SidecarError("INVALID_REQUEST", "effect ID path is invalid")
+    return decoded
+
+
 def _validate_structure(value: Any, *, depth: int = 0) -> None:
     if depth > 100:
         raise SidecarError("UNSUPPORTED_VALUE_TYPE", "JSON nesting is too deep")
@@ -868,7 +878,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                 self._reply(openapi_document())
                 return
             if path.startswith("/v1/effects/"):
-                effect_id = path.rsplit("/", 1)[-1]
+                effect_id = _effect_path_segment(path.rsplit("/", 1)[-1])
                 if not effect_id.startswith("mycelium:effect:v1:"):
                     raise SidecarError("NOT_FOUND", "effect not found", status=404)
                 entry = self._service().ledger.get(effect_id)
@@ -936,7 +946,9 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                 parts = path.strip("/").split("/")
                 if len(parts) != 4:
                     raise SidecarError("NOT_FOUND", "endpoint not found", status=404)
-                result = self._service().effect_command(parts[3], body, parts[2])
+                result = self._service().effect_command(
+                    parts[3], body, _effect_path_segment(parts[2])
+                )
                 status = 200
             else:
                 raise SidecarError("NOT_FOUND", "endpoint not found", status=404)
