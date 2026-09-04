@@ -1,0 +1,10 @@
+{
+  "name": "@mycelium-labs/sidecar-client-experimental",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Experimental server-side TypeScript client for the Mycelium development sidecar",
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": { "typecheck": "tsc --noEmit" },
+  "devDependencies": { "typescript": "5.7.2" }
+}
