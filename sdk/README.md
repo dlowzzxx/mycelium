@@ -2782,4 +2782,6 @@ git clone https://github.com/mycelium-labs/mycelium.git
 cd mycelium/sdk && pip install -e ".[dev]"
 pytest tests/ -v
 pytest --cov=mycelium --cov-report=term-missing
+ruff check mycelium tests
+bandit -c pyproject.toml -r mycelium
 ```
