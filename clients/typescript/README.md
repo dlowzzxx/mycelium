@@ -78,11 +78,10 @@ curl -H "Authorization: Bearer $MYCELIUM_SIDECAR_TOKEN" \
   http://127.0.0.1:8080/v1/capabilities
 ```
 
-OpenAPI 3.1 describes the routes, bearer scheme, generic JSON request bodies, and
-stable error-code extension. It is sufficient for manual generator experiments in
-TypeScript, Go, Java, or Rust, but responses are currently described at a compact
-projection level rather than as complete per-operation schemas. Disposition unions
-are runtime protocol values, so clients must reject unknown values.
+OpenAPI 3.1 describes the routes, bearer scheme, strict request bodies, per-operation
+responses, claim disposition union, typed values, and stable errors. It is suitable
+for generator experiments in TypeScript, Go, Java, or Rust. Disposition unions are
+runtime protocol values, so clients must reject unknown values.
 
 ## Development
 

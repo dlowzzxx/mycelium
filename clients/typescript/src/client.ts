@@ -30,6 +30,8 @@ function wireIdentity(input: IdentityRequest, options: MyceliumClientOptions): R
 }
 function projection(raw: Record<string, unknown>): EffectReply {
   if (typeof raw.protocol_version !== "string" || typeof raw.effect_id !== "string" || typeof raw.effect_state !== "string") throw new MyceliumProtocolError("invalid effect response", { code: "INVALID_RESPONSE", httpStatus: 200 });
+  if (!["INTENDED", "ATTEMPTING", "COMMITTED", "ABORTED", "UNKNOWN"].includes(raw.effect_state)) throw new MyceliumProtocolError("unsupported effect state", { code: "UNSUPPORTED_PROTOCOL", httpStatus: 200, effectId: raw.effect_id });
+  if (raw.provider_boundary !== null && raw.provider_boundary !== undefined && !["not_crossed", "maybe_crossed", "crossed"].includes(String(raw.provider_boundary))) throw new MyceliumProtocolError("unsupported provider boundary", { code: "UNSUPPORTED_PROTOCOL", httpStatus: 200, effectId: raw.effect_id });
   const lease = raw.lease && typeof raw.lease === "object" ? raw.lease as Record<string, unknown> : {};
   return {
     protocolVersion: raw.protocol_version, effectId: raw.effect_id, effectState: raw.effect_state,
