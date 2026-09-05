@@ -2,8 +2,9 @@
 
 ## Status and scope
 
-**Status:** approved for a development-only sidecar prototype. This is not a
-production-ready wire contract or deployment profile.
+**Status:** frozen as the development-only `v1alpha1` protocol contract. This is
+not a production-ready wire contract or deployment profile. The freeze makes
+this revision immutable; it does not promote it to beta or stable status.
 
 This document defines a language-neutral protocol boundary for an application that
 needs to make one externally observable effect safe across retries, redispatch,
@@ -15,7 +16,7 @@ The authoritative component is called the **engine**. An engine may initially be
 the existing Python runtime behind a local adapter or sidecar. An application
 client is a transport and integration layer, not a second safety state machine.
 
-This proposal does **not** promise distributed transactions, automatic discovery
+This revision does **not** promise distributed transactions, automatic discovery
 of provider calls, or exactly-once execution. The narrow guarantee is:
 
 > Under the documented storage, identity, provider-observation, authorization,
@@ -26,7 +27,7 @@ Anything outside the protected boundary remains the host's responsibility.
 
 ## Current implementation evidence
 
-The proposal is grounded in the current repository:
+The contract is grounded in the current repository:
 
 | Concern | Current evidence |
 |---|---|
@@ -69,7 +70,7 @@ Two important corrections govern the rest of this document:
    fingerprint, destination, side-effect class, `agent_id`, `policy_version`, and
    optionally `dispatch_id`. This is deterministic for the supported Python call
    paths, but `default=str`, Python tuple/list treatment, number rendering, and the
-   optional dispatch ID are not a safe cross-language contract. The proposed wire
+   optional dispatch ID are not a safe cross-language contract. The `v1alpha1` wire
    profile below is therefore a **deliberate change**, not a description of current
    interoperability.
 2. **Current Python `effect_id` is an alias of the transition key.**
@@ -127,8 +128,8 @@ be represented by references or redacted projections outside that storage.
 | `message_type` | Sender | Yes, from registry | Validates operation/shape | No | No | Yes | Reject unknown or incompatible type. |
 | `message_id` | Client/host | Yes | Uses for message replay handling only | No | No | Limited | Retry with same ID is message-idempotent; never creates a new effect. |
 | `agent_id` | Host/configuration, authenticated by engine | Candidate only | Binds to authenticated application identity | No | Proposed identity domain | Redacted/limited | Missing is allowed only for development policies; conflict is authorization failure. |
-| `run_id` | Host/framework | Yes | Validates scope policy; correlation only | No | Current Python scope input, proposed wire generally no | Limited | Missing when required is rejected or guard is not applicable. |
-| `dispatch_id` | Host/framework | Yes | Records it; does not make it business identity | No | Current Python: yes; proposed wire: no | Limited | Missing may use an engine/framework policy; different IDs must not split a proposed effect. |
+| `run_id` | Host/framework | Yes | Validates scope policy; correlation only | No | Current Python scope input, `v1alpha1` wire generally no | Limited | Missing when required is rejected or guard is not applicable. |
+| `dispatch_id` | Host/framework | Yes | Records it; does not make it business identity | No | Current Python: yes; `v1alpha1` wire: no | Limited | Missing may use an engine/framework policy; different IDs must not split a protected effect. |
 | `request_id` | Host business system | Candidate only | Validates explicit/derived identity policy | No | May select the business lookup, not the derived hash | Limited | Missing is rejected when explicit identity is required; conflict is identity error. |
 | `tool_id` | Registered engine contract | Candidate only | Resolves registered tool contract | No | Yes | Yes | Unknown tool or conflict is rejected. |
 | `execution_scope` / `destination` | Host plus engine policy | Candidate only | Authenticates tenant and validates allowlist | No for an effect | Yes | Redacted/limited | Missing or broadened scope is denied; conflict is identity/policy error. |
@@ -329,7 +330,7 @@ scope.
 
 # 4. Protocol operations
 
-The operation names below are proposed wire names. They correspond to current
+The operation names below are frozen `v1alpha1` wire names. They correspond to current
 Python capabilities but are not a promise of a particular endpoint shape.
 
 ## 4.1 Commands and replies
@@ -517,7 +518,7 @@ This is illustrative, not the final schema:
 
 ```json
 {
-  "protocol_version": "1.0",
+  "protocol_version": "v1alpha1",
   "message_type": "claim_effect",
   "message_id": "msg-01J...",
   "created_at": "2026-09-03T10:20:30Z",
@@ -902,7 +903,7 @@ Minimal configuration shape:
 
 ```yaml
 kind: mycelium-sidecar
-protocol_version: "1.0"
+protocol_version: "v1alpha1"
 identity_namespace: identity-v1
 tenant_id: tenant-a
 application_id: app-a
@@ -1020,6 +1021,18 @@ must provide a custom reconciler and recovery plan.
 
 # 9. Versioning and compatibility
 
+`v1alpha1` is the first frozen development protocol revision. Implementations
+must advertise and require that exact value. The identity and canonicalization
+contracts remain independently versioned as `identity-v1` and `jcs-1`.
+
+The contents of `v1alpha1` are immutable. A wire-visible breaking change,
+including changing a required field, route, disposition meaning, error meaning,
+or canonical representation, requires a new protocol revision such as
+`v1alpha2`. A correction that does not alter observable wire behavior may retain
+the version. Additive fields are permitted only through the extension rules
+already defined by this revision; they cannot silently become identity-bearing
+or execution-authorizing.
+
 * Negotiate a protocol version and feature capabilities before commands.
 * Additive fields are optional and ignored when unknown unless marked critical by
   an extension namespace.
@@ -1087,20 +1100,20 @@ Threat responses:
 
 | Desired guarantee | Protocol mechanism | Authoritative component | Required assumption | Existing Python evidence | Protocol conformance | Unsupported boundary | Maturity |
 |---|---|---|---|---|---|---|---|
-| Duplicate suppression | Canonical `effect_id`, durable lookup, stored-result reply | Engine + storage | Same logical input and durable namespace | Effect-id index tests; `ActionLedger` claim paths | Duplicate claim/dispatch vectors | Direct provider bypass | Current Python; proposed wire |
-| Stable effect identity | Versioned canonical preimage | Engine | Host identity is semantically complete | `derive_effect_id_for_call`, identity tests | Cross-language canonical fixtures | Bad host identity | Python mechanism exists; wire design |
-| Argument-drift rejection | Canonical input comparison and identity policy | Engine | Contract identifies meaningful fields | `ledger_identity.py`, args-drift tests | Same request with changed input | Unregistered arguments | Current Python; proposed wire |
-| Single active ownership | Atomic claim and lease | Engine + storage | CAS-capable durable backend | storage backends, contention tests | Concurrent claim scenarios | Non-durable memory across workers | Current Python; proposed wire |
-| Stale-worker fencing | Monotonic fence on every write | Engine + storage | All mutations route through engine | atomicity/fence tests | Takeover then stale writes | Unprotected direct provider call | Current Python; proposed wire |
-| Durable completion | Fenced completion with stored result | Engine + storage | Result write succeeds | completion and outcome tests | Crash/retry completion vectors | Provider result not reported | Current Python; proposed wire |
-| Conservative ambiguity | Boundary state and `UNKNOWN` fail-closed | Engine | Client truthfully reports boundary | TLA+, reconcile, UNKNOWN tests | Ambiguous timeout vectors | Compromised client can lie | Current Python; proposed wire |
-| Reconciliation | Read-only verdict and CAS resolution | Engine + reconciler | Provider query is truthful/read-only | `reconcile.py`, reconcile tests | completed/not-executed/unknown vectors | Provider cannot be queried | Current Python; proposed wire |
-| Provider key reuse | Engine-selected stable key and validity check | Engine + provider | Provider honors key semantics | provider-key tests | same-key retry/expiry vectors | Provider key TTL undocumented | Current Python; proposed wire |
-| Policy denial before execution | Atomic decision before `ATTEMPTING` | Engine policy | Policy facts are truthful and available | `decision.py`, decision tests | denial-before-boundary vectors | Host bypass or bad adapter | Current Python; proposed wire |
-| Operator resolution | Authenticated one-shot resolution | Engine + authorizer | Operator evidence and backend access trusted | operator release tests | authorization/replay vectors | Compromised operator credentials | Current Python; proposed wire |
-| Durable outcome evidence | Append/emitter/export records | Engine/storage/exporter | Durable configured sink and monitoring | outcome/audit tests | emission failure and retrieval vectors | Dashboards/paging are host-owned | Current Python; proposed wire |
-| Multi-worker behavior | Shared durable CAS and fences | Engine/storage | Correct topology and persistence | Redis proof and atomicity tests | process/concurrency harness | Memory backend | Current Python; proposed wire |
-| Cross-language compatibility | Shared schema, canonical fixtures, reference engine | Protocol authority | Clients do not implement policy | Current Python is reference candidate | Fixture and reference-server tests | Independent clients cannot be trusted as engines | Proposed |
+| Duplicate suppression | Canonical `effect_id`, durable lookup, stored-result reply | Engine + storage | Same logical input and durable namespace | Effect-id index tests; `ActionLedger` claim paths | Duplicate claim/dispatch vectors | Direct provider bypass | Current Python; frozen `v1alpha1` wire |
+| Stable effect identity | Versioned canonical preimage | Engine | Host identity is semantically complete | `derive_effect_id_for_call`, identity tests | Cross-language canonical fixtures | Bad host identity | Implemented `identity-v1` prototype |
+| Argument-drift rejection | Canonical input comparison and identity policy | Engine | Contract identifies meaningful fields | `ledger_identity.py`, args-drift tests | Same request with changed input | Unregistered arguments | Current Python; frozen `v1alpha1` wire |
+| Single active ownership | Atomic claim and lease | Engine + storage | CAS-capable durable backend | storage backends, contention tests | Concurrent claim scenarios | Non-durable memory across workers | Current Python; frozen `v1alpha1` wire |
+| Stale-worker fencing | Monotonic fence on every write | Engine + storage | All mutations route through engine | atomicity/fence tests | Takeover then stale writes | Unprotected direct provider call | Current Python; frozen `v1alpha1` wire |
+| Durable completion | Fenced completion with stored result | Engine + storage | Result write succeeds | completion and outcome tests | Crash/retry completion vectors | Provider result not reported | Current Python; frozen `v1alpha1` wire |
+| Conservative ambiguity | Boundary state and `UNKNOWN` fail-closed | Engine | Client truthfully reports boundary | TLA+, reconcile, UNKNOWN tests | Ambiguous timeout vectors | Compromised client can lie | Current Python; frozen `v1alpha1` wire |
+| Reconciliation | Read-only verdict and CAS resolution | Engine + reconciler | Provider query is truthful/read-only | `reconcile.py`, reconcile tests | completed/not-executed/unknown vectors | Provider cannot be queried | Current Python; frozen `v1alpha1` wire |
+| Provider key reuse | Engine-selected stable key and validity check | Engine + provider | Provider honors key semantics | provider-key tests | same-key retry/expiry vectors | Provider key TTL undocumented | Current Python; frozen `v1alpha1` wire |
+| Policy denial before execution | Atomic decision before `ATTEMPTING` | Engine policy | Policy facts are truthful and available | `decision.py`, decision tests | denial-before-boundary vectors | Host bypass or bad adapter | Current Python; frozen `v1alpha1` wire |
+| Operator resolution | Authenticated one-shot resolution | Engine + authorizer | Operator evidence and backend access trusted | operator release tests | authorization/replay vectors | Compromised operator credentials | Current Python; frozen `v1alpha1` wire |
+| Durable outcome evidence | Append/emitter/export records | Engine/storage/exporter | Durable configured sink and monitoring | outcome/audit tests | emission failure and retrieval vectors | Dashboards/paging are host-owned | Current Python; frozen `v1alpha1` wire |
+| Multi-worker behavior | Shared durable CAS and fences | Engine/storage | Correct topology and persistence | Redis proof and atomicity tests | process/concurrency harness | Memory backend | Current Python; frozen `v1alpha1` wire |
+| Cross-language compatibility | Shared schema, canonical fixtures, reference engine | Protocol authority | Clients do not implement policy | Python sidecar with TypeScript and Go clients | Fixture and reference-server checks | Independent clients cannot be trusted as engines | Implemented development prototype |
 
 ## 11.1 Threat-model guarantee matrix
 
@@ -1252,11 +1265,12 @@ Python names.
 | Legacy compatibility | Approved | Separate namespace, read-only inspection, audited immutable alias | No automatic or active/unknown migration |
 | Hostile-client model | Approved boundary | Correct/fallible guarantees matrix | Bypass and forged provider reports unsupported |
 | Provider attestation | Approved optional | Extensible attestation evidence | Required only for stronger hostile deployments |
-| Sidecar readiness | Approved for development only | D17 scope and restrictions | Not production-ready |
+| Sidecar readiness | Frozen as v1alpha1 for development only | D17 scope and restrictions | Not production-ready |
 
 ## Recommendation
 
-Proceed with the development-only sidecar prototype within the approved scope.
+Use the frozen `v1alpha1` contract for development-only sidecar and client
+experiments within the approved scope.
 The architecture is viable if the engine remains authoritative and provider-boundary
 truth is treated as an explicit host responsibility. The largest later-scope risk
 is not serialization; it is the trust gap created when an application can bypass

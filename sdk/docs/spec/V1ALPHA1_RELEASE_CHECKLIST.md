@@ -1,0 +1,116 @@
+# Mycelium sidecar protocol v1alpha1
+
+**Status:** frozen development protocol. Not published and not production-ready.
+
+`v1alpha1` is the first immutable interoperability target for the Mycelium
+sidecar and language clients. Freezing this revision means implementations can
+depend on one exact contract while it is evaluated. It does not create a stable
+`v1` compatibility promise.
+
+## Frozen identifiers
+
+| Contract | Frozen value | Purpose |
+|---|---|---|
+| Sidecar protocol | `v1alpha1` | HTTP operations, messages, dispositions, and errors |
+| Identity namespace | `identity-v1` | Effect identity preimage and hash construction |
+| Identity version | `1` | Identity preimage field set |
+| Canonicalization profile | `jcs-1` | Cross-language canonical JSON rules |
+| Decimal profile | `decimal-1` | Exact decimal wire representation |
+| URL profile | `url-1` | Conservative URL wire representation |
+
+The sidecar, OpenAPI document, TypeScript client, Go client, examples, and
+fixtures must use these exact values. A client must fail closed when it receives
+an unsupported safety-critical version or enum value.
+
+## Frozen surface
+
+`v1alpha1` freezes:
+
+- the twelve documented HTTP routes and their operation IDs;
+- loopback bearer authentication and fixed tenant/application binding;
+- operation-specific request and response shapes;
+- the seven claim dispositions;
+- owner, lease, and fence requirements;
+- explicit provider-boundary reporting;
+- the stable protocol-error envelope and uncertainty fields;
+- engine-derived effect identities;
+- the identity, canonicalization, decimal, and URL profiles;
+- the rule that the Python engine remains authoritative.
+
+The OpenAPI document returned by `openapi_document()` and served at
+`GET /v1/openapi.json` is the machine-readable transport contract. The Transition
+Envelope specification and decision log define rules that OpenAPI cannot express,
+including fencing, recovery authority, and fail-closed behavior.
+
+For the freeze commit, compact UTF-8 JSON with recursively sorted object keys and
+no insignificant whitespace is 48,255 bytes and has this SHA-256 fingerprint:
+
+```text
+2bc2db4101b1231a8c02c7e79c116b68d2fdce1c171714cbfc8e3c5df81a73c7
+```
+
+The fingerprint is an audit aid, not the protocol version. Any intentional
+wire-visible change must select a new protocol revision rather than merely update
+this fingerprint under `v1alpha1`.
+
+## Compatibility rules
+
+- The contents of `v1alpha1` are immutable.
+- A wire-visible breaking change requires a new revision such as `v1alpha2`.
+- Changing identity fields or hashing requires a new identity namespace.
+- Changing canonicalization semantics requires a new canonicalization profile.
+- Unknown safety-critical versions, states, boundaries, or dispositions fail
+  closed.
+- Non-critical extensions may be ignored only where `v1alpha1` explicitly allows
+  them.
+- An extension cannot silently become identity-bearing or authorize execution.
+- Existing `v1alpha1` records remain labeled with their original protocol,
+  identity, and canonicalization versions.
+- Legacy Python identities are not reinterpreted as `identity-v1` records.
+
+## Current implementations
+
+| Implementation | Status |
+|---|---|
+| Python development sidecar | Implements and advertises `v1alpha1` |
+| TypeScript client | Requires `v1alpha1`; private and unpublished |
+| Go client | Requires `v1alpha1`; untagged and unpublished |
+| Raw HTTP clients | May use the same authenticated OpenAPI contract |
+
+TypeScript and Go are interoperability examples. They do not define the protocol
+and do not contain authoritative transition logic.
+
+## Experimental publication gates
+
+Before publishing any preview package or tag:
+
+- [x] Freeze the protocol revision as `v1alpha1`.
+- [x] Freeze `identity-v1`, `jcs-1`, `decimal-1`, and `url-1` for this revision.
+- [x] Align the Python sidecar, OpenAPI document, TypeScript client, and Go client.
+- [x] Preserve fail-closed handling for unknown safety-critical values.
+- [ ] Approve public package names and package versions.
+- [ ] Decide whether the TypeScript client remains private or becomes an npm
+  preview package.
+- [ ] Approve the Go module tag strategy.
+- [ ] Approve the Python package version that first includes the sidecar preview.
+- [ ] Add release notes that state the development-only limitations.
+- [ ] Run the project release checklist for the selected Python release.
+- [ ] Obtain explicit approval before publishing or tagging anything.
+
+## Production gates
+
+The protocol freeze does not make the sidecar production-ready. Production
+support requires a separately approved effort covering repeatable conformance and
+failure validation, deployment topology, durable storage, monitoring,
+authentication appropriate to the deployment, reconciliation requirements, and
+operational recovery.
+
+Remote hosting, multi-tenancy, hostile-client protection, provider attestation,
+automatic legacy migration, and exactly-once claims remain outside `v1alpha1`.
+They are not required merely to experiment with the local trusted-client profile.
+
+## Release decision
+
+No artifact is published by this freeze. The next authorized release action is to
+choose package names and preview versions, complete the applicable unchecked
+gates above, and obtain explicit publication approval.

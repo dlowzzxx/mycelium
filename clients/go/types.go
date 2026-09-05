@@ -13,6 +13,8 @@ type ToolContractVersion string
 type OwnerID string
 type Fence int64
 
+const ProtocolVersionV1Alpha1 ProtocolVersion = "v1alpha1"
+
 type DecimalValue struct {
 	Type    string `json:"$type"`
 	Profile string `json:"profile"`

@@ -35,7 +35,7 @@ from mycelium.transition import (
     ToolTransitionBinding,
 )
 
-PROTOCOL_VERSION = "1.0"
+PROTOCOL_VERSION = "v1alpha1"
 IDENTITY_VERSION = "1"
 CANONICALIZATION_VERSION = "jcs-1"
 MAX_PREIMAGE_BYTES = 65536
@@ -735,8 +735,8 @@ def openapi_document() -> dict[str, Any]:
                 "identifier": "LicenseRef-Mycelium-Development-Only",
             },
             "description": (
-                "Development-only loopback JSON protocol. Python remains authoritative. "
-                "No exactly-once or hostile-client guarantee."
+                f"Frozen development protocol {PROTOCOL_VERSION} over loopback JSON. "
+                "Python remains authoritative. No exactly-once or hostile-client guarantee."
             ),
         },
         "servers": [{"url": "http://127.0.0.1"}],
@@ -764,6 +764,8 @@ def openapi_document() -> dict[str, Any]:
             },
         },
         "x-development-only": True,
+        "x-protocol-revision": PROTOCOL_VERSION,
+        "x-protocol-status": "frozen-development-alpha",
         "x-authentication": (
             "All /v1 routes require Authorization: Bearer. "
             "/health is the only unauthenticated route."
@@ -1022,7 +1024,7 @@ class SidecarConfig:
         if not self.tenant_id or not self.application_id:
             raise ValueError("tenant_id and application_id are required")
         if self.protocol_version != PROTOCOL_VERSION:
-            raise ValueError("only protocol version 1.0 is supported")
+            raise ValueError(f"only protocol version {PROTOCOL_VERSION} is supported")
         if self.identity_namespace != "identity-v1":
             raise ValueError("only identity-v1 namespace is supported")
         if not 0 <= self.port <= 65535:

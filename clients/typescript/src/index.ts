@@ -1,4 +1,4 @@
-export { MyceliumClient } from "./client.js";
+export { MyceliumClient, PROTOCOL_VERSION } from "./client.js";
 export { JsonTransport } from "./transport.js";
 export { MyceliumLocalValidationError, MyceliumProtocolError, MyceliumTransportError } from "./errors.js";
 export type * from "./types.js";

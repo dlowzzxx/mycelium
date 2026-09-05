@@ -3,7 +3,8 @@
 This private package is the first external-language interoperability experiment for
 Mycelium. The protocol remains language-neutral and the Python sidecar remains the
 authority for identity, policy, claims, fencing, state transitions, and recovery.
-It targets Node.js 18 or newer with native `fetch`. It is not published to npm.
+It targets Node.js 18 or newer with native `fetch` and requires the frozen
+development protocol `v1alpha1`. It is not published to npm.
 
 ## Start the sidecar
 

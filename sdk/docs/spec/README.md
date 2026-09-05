@@ -2,7 +2,10 @@
 
 ## Language-neutral protocol design
 
-- [Mycelium Transition Envelope](TRANSITION_ENVELOPE.md): proposed language-neutral
+- [v1alpha1 freeze and release checklist](V1ALPHA1_RELEASE_CHECKLIST.md): frozen
+  identifiers, compatibility rules, validation targets, and explicit publication
+  gates for the first experimental protocol revision.
+- [Mycelium Transition Envelope](TRANSITION_ENVELOPE.md): frozen `v1alpha1` language-neutral
   envelope, state machine, operations, canonicalization, sidecar architecture,
   TypeScript client, security model, guarantee map, and roadmap.
 - [Transition Envelope JSON Schema](transition-envelope.schema.json): JSON Schema
@@ -19,7 +22,8 @@ executable conformance layer; this file is the compact formal sketch.
 
 ## OpenAPI contract
 
-The development sidecar serves the machine-readable OpenAPI 3.1 contract at
+The development sidecar serves the frozen `v1alpha1` machine-readable OpenAPI
+3.1 contract at
 `GET /v1/openapi.json`. It is generated directly from `mycelium.sidecar` so the
 served document remains the single transport description. `/health` is the only
 unauthenticated route; every other route uses the local bearer scheme.
@@ -36,7 +40,7 @@ TypeScript   Go   Java   Rust   Raw HTTP client
        Same Mycelium sidecar protocol
 ```
 
-The current OpenAPI is suitable for generator experiments and describes strict
+The `v1alpha1` OpenAPI is suitable for generator experiments and describes strict
 request shapes, responses, claim dispositions, typed values, and protocol errors.
 A standalone export command is intentionally deferred because the served document
 is the only authoritative copy and does not require sidecar startup for inspection

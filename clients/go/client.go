@@ -231,7 +231,7 @@ func validateReflect(value reflect.Value, field string) error {
 }
 
 func validateEffectReply(effect *EffectReply) error {
-	if effect.ProtocolVersion != "1.0" || !validEffectID(effect.EffectID) {
+	if effect.ProtocolVersion != ProtocolVersionV1Alpha1 || !validEffectID(effect.EffectID) {
 		return &ProtocolError{Code: "INVALID_RESPONSE", Message: "sidecar returned an invalid effect identity", HTTPStatus: 200}
 	}
 	states := map[EffectState]bool{StateIntended: true, StateAttempting: true, StateCommitted: true, StateAborted: true, StateUnknown: true}
@@ -321,11 +321,17 @@ func (c *Client) identity(in IdentityRequest) IdentityRequest {
 func (c *Client) Health(ctx context.Context) (*HealthReply, error) {
 	var out HealthReply
 	err := c.request(ctx, "getHealth", http.MethodGet, "/health", nil, &out, false)
+	if err == nil && (out.ProtocolVersion != ProtocolVersionV1Alpha1 || out.Status != "ok") {
+		err = &ProtocolError{Code: "UNSUPPORTED_PROTOCOL", Message: "sidecar health response is incompatible", HTTPStatus: 200}
+	}
 	return &out, err
 }
 func (c *Client) Capabilities(ctx context.Context) (*CapabilitiesReply, error) {
 	var out CapabilitiesReply
 	err := c.request(ctx, "getCapabilities", http.MethodGet, "/v1/capabilities", nil, &out, true)
+	if err == nil && (out.ProtocolVersion != ProtocolVersionV1Alpha1 || out.IdentityNamespace != "identity-v1" || !out.DevelopmentOnly) {
+		err = &ProtocolError{Code: "UNSUPPORTED_PROTOCOL", Message: "sidecar capabilities are incompatible", HTTPStatus: 200}
+	}
 	return &out, err
 }
 func (c *Client) AssertCompatible(ctx context.Context) error {
@@ -334,7 +340,7 @@ func (c *Client) AssertCompatible(ctx context.Context) error {
 		return err
 	}
 	required := []string{"derive_identity", "claim_effect", "inspect_effect", "complete_effect"}
-	if caps.ProtocolVersion != "1.0" || caps.IdentityNamespace != "identity-v1" || !caps.DevelopmentOnly {
+	if caps.ProtocolVersion != ProtocolVersionV1Alpha1 || caps.IdentityNamespace != "identity-v1" || !caps.DevelopmentOnly {
 		return &ProtocolError{Code: "UNSUPPORTED_PROTOCOL", Message: "sidecar protocol is incompatible", HTTPStatus: 200}
 	}
 	for _, want := range required {
@@ -353,6 +359,9 @@ func (c *Client) AssertCompatible(ctx context.Context) error {
 func (c *Client) DeriveEffectIdentity(ctx context.Context, in IdentityRequest) (*DeriveIdentityReply, error) {
 	var out DeriveIdentityReply
 	err := c.request(ctx, "deriveEffectIdentity", http.MethodPost, "/v1/identities/derive", c.identity(in), &out, true)
+	if err == nil && (out.ProtocolVersion != ProtocolVersionV1Alpha1 || out.IdentityNamespace != "identity-v1" || !validEffectID(out.EffectID)) {
+		err = &ProtocolError{Code: "UNSUPPORTED_PROTOCOL", Message: "sidecar identity response is incompatible", HTTPStatus: 200}
+	}
 	return &out, err
 }
 func (c *Client) ClaimEffect(ctx context.Context, in ClaimEffectRequest) (*ClaimReply, error) {

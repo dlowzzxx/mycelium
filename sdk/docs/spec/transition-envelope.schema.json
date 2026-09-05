@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://mycelium-labs.github.io/mycelium/schemas/transition-envelope-1.0.json",
-  "title": "Mycelium Transition Envelope (proposal)",
-  "description": "Structural wire schema for the proposed language-neutral protocol. Stateful CAS, ownership, and authorization rules are normative in TRANSITION_ENVELOPE.md and are not fully expressible in JSON Schema.",
+  "$id": "https://mycelium-labs.github.io/mycelium/schemas/transition-envelope-v1alpha1.json",
+  "title": "Mycelium Transition Envelope v1alpha1",
+  "description": "Frozen structural wire schema for the development-only v1alpha1 language-neutral protocol. Stateful CAS, ownership, and authorization rules are normative in TRANSITION_ENVELOPE.md and are not fully expressible in JSON Schema.",
   "oneOf": [
     {"$ref": "#/$defs/command"},
     {"$ref": "#/$defs/reply"},
@@ -32,7 +32,7 @@
       "type": "object",
       "required": ["protocol_version", "message_type", "message_id", "created_at"],
       "properties": {
-        "protocol_version": {"type": "string", "minLength": 1},
+        "protocol_version": {"const": "v1alpha1"},
         "message_type": {"type": "string", "minLength": 1},
         "message_id": {"type": "string", "minLength": 1},
         "created_at": {"$ref": "#/$defs/timestamp"},
@@ -105,7 +105,7 @@
       "unevaluatedProperties": false,
       "examples": [
         {
-          "protocol_version": "1.0",
+          "protocol_version": "v1alpha1",
           "message_type": "claim_effect",
           "message_id": "msg-01",
           "created_at": "2026-09-03T10:20:30Z",
@@ -151,7 +151,7 @@
       "unevaluatedProperties": false,
       "examples": [
         {
-          "protocol_version": "1.0",
+          "protocol_version": "v1alpha1",
           "message_type": "reply_claim_effect",
           "message_id": "reply-01",
           "created_at": "2026-09-03T10:20:31Z",
@@ -188,7 +188,7 @@
       "additionalProperties": false,
       "required": ["protocol_version", "record_type", "effect_id", "effect_state", "tool_id", "canonicalization_version"],
       "properties": {
-        "protocol_version": {"type": "string", "minLength": 1},
+        "protocol_version": {"const": "v1alpha1"},
         "record_type": {"const": "stored_transition"},
         "effect_id": {"type": "string", "minLength": 1},
         "request_id": {"type": "string", "minLength": 1},

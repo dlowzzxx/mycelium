@@ -6,6 +6,8 @@ import type {
   IdentityRequest, ProviderReferenceRequest, ReconcileRequest,
 } from "./types.js";
 
+export const PROTOCOL_VERSION = "v1alpha1" as const;
+
 export interface MyceliumClientOptions {
   baseUrl: string;
   token?: string;
@@ -29,7 +31,7 @@ function wireIdentity(input: IdentityRequest, options: MyceliumClientOptions): R
   };
 }
 function projection(raw: Record<string, unknown>): EffectReply {
-  if (typeof raw.protocol_version !== "string" || typeof raw.effect_id !== "string" || typeof raw.effect_state !== "string") throw new MyceliumProtocolError("invalid effect response", { code: "INVALID_RESPONSE", httpStatus: 200 });
+  if (raw.protocol_version !== PROTOCOL_VERSION || typeof raw.effect_id !== "string" || typeof raw.effect_state !== "string") throw new MyceliumProtocolError("invalid or unsupported effect response", { code: "UNSUPPORTED_PROTOCOL", httpStatus: 200 });
   if (!["INTENDED", "ATTEMPTING", "COMMITTED", "ABORTED", "UNKNOWN"].includes(raw.effect_state)) throw new MyceliumProtocolError("unsupported effect state", { code: "UNSUPPORTED_PROTOCOL", httpStatus: 200, effectId: raw.effect_id });
   if (raw.provider_boundary !== null && raw.provider_boundary !== undefined && !["not_crossed", "maybe_crossed", "crossed"].includes(String(raw.provider_boundary))) throw new MyceliumProtocolError("unsupported provider boundary", { code: "UNSUPPORTED_PROTOCOL", httpStatus: 200, effectId: raw.effect_id });
   const lease = raw.lease && typeof raw.lease === "object" ? raw.lease as Record<string, unknown> : {};
@@ -49,10 +51,14 @@ export class MyceliumClient {
   private readonly transport: JsonTransport;
   private readonly options: MyceliumClientOptions;
   constructor(options: MyceliumClientOptions) { this.options = options; this.transport = new JsonTransport(options); }
-  health(): Promise<HealthReply> { return this.transport.request("GET", "/health", undefined, false); }
+  async health(): Promise<HealthReply> {
+    const value = await this.transport.request<HealthReply>("GET", "/health", undefined, false);
+    if (value.protocol_version !== PROTOCOL_VERSION || value.status !== "ok") throw new MyceliumProtocolError("unsupported sidecar health response", { code: "UNSUPPORTED_PROTOCOL", httpStatus: 200 });
+    return value;
+  }
   async capabilities(): Promise<CapabilitiesReply> {
     const value = await this.transport.request<CapabilitiesReply>("GET", "/v1/capabilities");
-    if (value.protocol_version !== "1.0" || value.identity_namespace !== "identity-v1" || value.development_only !== true || !Array.isArray(value.operations)) throw new MyceliumProtocolError("unsupported sidecar capabilities", { code: "UNSUPPORTED_PROTOCOL", httpStatus: 200 });
+    if (value.protocol_version !== PROTOCOL_VERSION || value.identity_namespace !== "identity-v1" || value.development_only !== true || !Array.isArray(value.operations)) throw new MyceliumProtocolError("unsupported sidecar capabilities", { code: "UNSUPPORTED_PROTOCOL", httpStatus: 200 });
     return value;
   }
   async assertCompatible(): Promise<CapabilitiesReply> {
@@ -62,7 +68,7 @@ export class MyceliumClient {
   }
   async deriveIdentity(request: IdentityRequest): Promise<IdentityReply> {
     const raw = await this.transport.request<Record<string, unknown>>("POST", "/v1/identities/derive", wireIdentity(request, this.options));
-    if (typeof raw.effect_id !== "string" || typeof raw.canonical_json !== "string" || typeof raw.canonical_bytes !== "number") throw new MyceliumProtocolError("invalid identity response", { code: "INVALID_RESPONSE", httpStatus: 200 });
+    if (raw.protocol_version !== PROTOCOL_VERSION || raw.identity_namespace !== "identity-v1" || typeof raw.effect_id !== "string" || typeof raw.canonical_json !== "string" || typeof raw.canonical_bytes !== "number") throw new MyceliumProtocolError("invalid or unsupported identity response", { code: "UNSUPPORTED_PROTOCOL", httpStatus: 200 });
     return { protocolVersion: String(raw.protocol_version), effectId: raw.effect_id, canonicalJson: raw.canonical_json, canonicalBytes: raw.canonical_bytes, identityNamespace: String(raw.identity_namespace) };
   }
   async claimEffect(request: ClaimEffectRequest): Promise<ClaimReply> {

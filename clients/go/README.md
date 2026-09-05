@@ -3,7 +3,8 @@
 This private module is the second external-language interoperability experiment for
 Mycelium. The protocol remains language-neutral. Python and `ActionLedger` remain
 authoritative for identity, policy, claims, fencing, state transitions, and recovery.
-Nothing is published.
+The client requires the frozen development protocol `v1alpha1`. Nothing is
+published.
 
 ## Requirements and startup
 

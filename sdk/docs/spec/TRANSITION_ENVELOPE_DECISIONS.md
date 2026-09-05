@@ -1,12 +1,12 @@
 # Transition Envelope identity decisions
 
-**Status:** RFC approved for a development-only sidecar prototype. These decisions
-specify the proposed `identity-v1` wire contract and do not change the Python
-runtime. Production deployment remains out of scope.
+**Status:** RFC frozen as the development-only `v1alpha1` protocol contract.
+These decisions specify the `identity-v1` wire contract. Production deployment
+remains out of scope.
 
 ## D1. Authoritative effect-ID derivation
 
-- **Status:** accepted for RFC draft.
+- **Status:** frozen for `v1alpha1`.
 - **Decision:** The engine canonicalizes the validated identity preimage and derives
   `effect_id`. A client may send a cached value only as a consistency hint.
 - **Reasoning:** A client-controlled digest could fragment identity through different
@@ -16,7 +16,7 @@ runtime. Production deployment remains out of scope.
 
 ## D2. Frozen `identity-v1` preimage
 
-- **Status:** accepted for RFC draft.
+- **Status:** frozen for `v1alpha1`.
 - **Decision:** The preimage has exactly these members:
 
   `application_id`, `business_request_id`,
@@ -37,7 +37,7 @@ runtime. Production deployment remains out of scope.
 
 ## D3. Dispatch and run identity
 
-- **Status:** accepted for wire draft.
+- **Status:** frozen for `v1alpha1`.
 - **Decision:** `dispatch_id` and `run_id` are correlation metadata, not identity
   members. A new dispatch or restarted run for the same business operation must
   converge on one wire effect.
@@ -47,7 +47,7 @@ runtime. Production deployment remains out of scope.
 
 ## D4. Business request identity
 
-- **Status:** accepted for wire draft.
+- **Status:** frozen for `v1alpha1`.
 - **Decision:** `business_request_id` is a required stable host-owned identity member,
   not merely an alias or transport ID. The engine may maintain a request-to-effect
   index for drift detection, but `effect_id` remains the canonical record key.
@@ -57,7 +57,7 @@ runtime. Production deployment remains out of scope.
 
 ## D5. Canonicalization standard and value model
 
-- **Status:** approved for RFC draft and fixture adoption.
+- **Status:** frozen for `v1alpha1` and fixture adoption.
 - **Decision:** Use RFC 8785 JSON Canonicalization Scheme with a Mycelium profile
   named `jcs-1`.
 - **Universal rules:** UTF-8 output, RFC 8785 key ordering and escaping, arrays
@@ -78,7 +78,7 @@ runtime. Production deployment remains out of scope.
 
 ## D6. Identity hash construction
 
-- **Status:** accepted for RFC draft.
+- **Status:** frozen for `v1alpha1`.
 - **Decision:**
 
   ```text
@@ -98,7 +98,7 @@ runtime. Production deployment remains out of scope.
 
 ## D7. Policy and contract versions
 
-- **Status:** accepted for RFC draft.
+- **Status:** frozen for `v1alpha1`.
 - **Decision:** `canonicalization_version`, `identity_version`, and
   `tool_contract_version` are identity members. `policy_version` is recorded and
   revalidated but excluded from identity. Protocol/envelope/runtime versions are
@@ -112,7 +112,7 @@ runtime. Production deployment remains out of scope.
 
 ## D8. Provider keys and secrets
 
-- **Status:** accepted for RFC draft.
+- **Status:** frozen for `v1alpha1`.
 - **Decision:** Provider idempotency keys, references, and responses are not identity
   members. Provider keys are write-once evidence and are checked by the provider-key
   policy. Resolved credentials are prohibited from canonical input. Structured secret
@@ -293,3 +293,22 @@ implementation of a development-only sidecar prototype within D17's restrictions
 Production deployment, remote multi-tenancy, automatic migration, hostile-client
 protection, and provider-owned execution remain later scope rather than implicit
 protocol guarantees.
+
+## D18. Protocol v1alpha1 freeze
+
+- **Status:** accepted and frozen.
+- **Decision:** The first development-only wire revision is `v1alpha1`. The
+  sidecar, OpenAPI document, TypeScript client, Go client, and protocol examples
+  must advertise and require that exact value.
+- **Independent versions:** The protocol revision does not rename or weaken
+  `identity-v1` or `jcs-1`. A change to identity preimage or canonicalization
+  semantics requires its own new namespace or profile as well as an appropriate
+  protocol revision.
+- **Compatibility:** The contents of `v1alpha1` are immutable. Breaking changes
+  require a new revision such as `v1alpha2`; clients must fail closed when a
+  server advertises an unsupported revision. Non-wire corrections may retain
+  `v1alpha1`. Extensions remain subject to the existing critical and
+  non-critical extension rules.
+- **Release meaning:** Frozen means that implementations have a fixed target. It
+  does not mean production-ready, stable `v1`, published, or supported for remote
+  and multi-tenant deployment.
