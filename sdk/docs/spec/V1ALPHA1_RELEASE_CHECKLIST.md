@@ -96,8 +96,23 @@ Before publishing any preview package or tag:
 - [x] Approve `mycelium-runtime==1.38.2` as the first Python package version
   containing the sidecar preview.
 - [x] Add Python release notes that state the development-only limitations.
-- [ ] Run the project release checklist for the selected Python release.
+- [x] Run the local portions of the project release checklist for the selected
+  Python release. Release-PR CI and post-publication checks remain pending.
 - [ ] Obtain explicit approval before publishing or tagging anything.
+
+## Validation recorded on 2026-09-05
+
+- Python: `1.38.2` wheel and source archive built; distribution-content check
+  passed; the wheel contains the sidecar and CLI entry point.
+- Python: the existing suite passed with 1,521 tests passed and 15 skipped;
+  `ruff check mycelium tests` passed. No test files were changed.
+- TypeScript: typecheck, build, and npm pack dry run passed. The package contains
+  13 intended files and uses the `experimental` distribution tag.
+- Go: `go vet ./...` and `go build ./...` passed for the declared module path.
+- Registry collision checks: Python `1.38.2`, the npm package name, and the Go
+  submodule tag were all absent when checked.
+- Pending external gate: push the commits, open or update the release PR, and
+  require green CI for Python 3.10 through 3.13 before any publication action.
 
 ## Production gates
 
