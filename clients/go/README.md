@@ -1,16 +1,25 @@
 # Experimental Go sidecar client
 
-This private module is the second external-language interoperability experiment for
+This module is the second external-language interoperability experiment for
 Mycelium. The protocol remains language-neutral. Python and `ActionLedger` remain
 authoritative for identity, policy, claims, fencing, state transitions, and recovery.
-The client requires the frozen development protocol `v1alpha1`. Nothing is
-published.
+The client requires the frozen development protocol `v1alpha1`. Version `v0.1.0`
+is prepared but has not been tagged or published.
 
 ## Requirements and startup
 
 - Go 1.22 or newer
 - Standard library only
 - A running development-only Python sidecar
+
+After the release tag exists, install the module with:
+
+```sh
+go get github.com/mycelium-labs/mycelium/clients/go@v0.1.0
+```
+
+Because the module lives in a repository subdirectory, its release tag must be
+`clients/go/v0.1.0`. Creating and pushing that tag is the publication action.
 
 ```sh
 mycelium sidecar serve --config /absolute/path/sidecar.yaml
