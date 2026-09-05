@@ -1,10 +1,35 @@
 {
-  "name": "@mycelium-labs/sidecar-client-experimental",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@mycelium-labs/sidecar-client",
+  "version": "0.1.0",
   "description": "Experimental server-side TypeScript client for the Mycelium development sidecar",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mycelium-labs/mycelium.git",
+    "directory": "clients/typescript"
+  },
+  "homepage": "https://github.com/mycelium-labs/mycelium/tree/main/clients/typescript",
+  "bugs": "https://github.com/mycelium-labs/mycelium/issues",
+  "files": ["dist", "README.md", "LICENSE"],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "engines": { "node": ">=18" },
-  "scripts": { "typecheck": "tsc --noEmit" },
+  "publishConfig": {
+    "access": "public",
+    "tag": "experimental",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "prepack": "npm run build"
+  },
   "devDependencies": { "typescript": "5.7.2" }
 }

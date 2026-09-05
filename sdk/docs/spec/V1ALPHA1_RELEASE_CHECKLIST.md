@@ -73,7 +73,7 @@ this fingerprint under `v1alpha1`.
 | Implementation | Status |
 |---|---|
 | Python development sidecar | Implements and advertises `v1alpha1` |
-| TypeScript client | Requires `v1alpha1`; private and unpublished |
+| TypeScript client | Requires `v1alpha1`; npm package prepared and unpublished |
 | Go client | Requires `v1alpha1`; untagged and unpublished |
 | Raw HTTP clients | May use the same authenticated OpenAPI contract |
 
@@ -89,8 +89,8 @@ Before publishing any preview package or tag:
 - [x] Align the Python sidecar, OpenAPI document, TypeScript client, and Go client.
 - [x] Preserve fail-closed handling for unknown safety-critical values.
 - [ ] Approve public package names and package versions.
-- [ ] Decide whether the TypeScript client remains private or becomes an npm
-  preview package.
+- [x] Prepare `@mycelium-labs/sidecar-client@0.1.0` as a public npm preview on
+  the `experimental` distribution tag. It remains unpublished until approval.
 - [ ] Approve the Go module tag strategy.
 - [x] Approve `mycelium-runtime==1.38.2` as the first Python package version
   containing the sidecar preview.

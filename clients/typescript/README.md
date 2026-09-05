@@ -1,10 +1,11 @@
 # Experimental Mycelium sidecar client
 
-This private package is the first external-language interoperability experiment for
+This package is the first external-language interoperability experiment for
 Mycelium. The protocol remains language-neutral and the Python sidecar remains the
 authority for identity, policy, claims, fencing, state transitions, and recovery.
 It targets Node.js 18 or newer with native `fetch` and requires the frozen
-development protocol `v1alpha1`. It is not published to npm.
+development protocol `v1alpha1`. Version `0.1.0` is prepared for the npm
+`experimental` channel but is not published yet.
 
 ## Start the sidecar
 
@@ -22,7 +23,7 @@ provide permissive CORS or browser authentication.
 ## Use the client
 
 ```ts
-import { MyceliumClient, decimal } from "@mycelium-labs/sidecar-client-experimental";
+import { MyceliumClient, decimal } from "@mycelium-labs/sidecar-client";
 
 const client = new MyceliumClient({
   baseUrl: "http://127.0.0.1:8080",
@@ -88,8 +89,10 @@ runtime protocol values, so clients must reject unknown values.
 
 ```sh
 npm install
+npm run build
 npm run typecheck
 ```
 
-This package is private and experimental. Do not publish it or treat it as a
-release-supported SDK.
+This package is experimental. Publishing it with the configured
+`experimental` distribution tag keeps it out of npm's default `latest` channel.
+Do not treat it as a production-supported SDK.
