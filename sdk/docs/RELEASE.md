@@ -168,6 +168,7 @@ To generate and verify the CycloneDX SBOM locally:
    ```bash
    cyclonedx-py environment .sbom-env/bin/python \
      --pyproject sdk/pyproject.toml \
+     --mc-type library \
      --output-format JSON \
      --output-file sdk/dist/mycelium-runtime.cdx.json
    ```
