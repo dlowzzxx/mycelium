@@ -2296,7 +2296,7 @@ wheels = [
 
 [[package]]
 name = "mycelium-runtime"
-version = "1.38.1"
+version = "1.38.2"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },

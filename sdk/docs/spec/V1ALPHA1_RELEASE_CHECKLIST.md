@@ -92,8 +92,9 @@ Before publishing any preview package or tag:
 - [ ] Decide whether the TypeScript client remains private or becomes an npm
   preview package.
 - [ ] Approve the Go module tag strategy.
-- [ ] Approve the Python package version that first includes the sidecar preview.
-- [ ] Add release notes that state the development-only limitations.
+- [x] Approve `mycelium-runtime==1.38.2` as the first Python package version
+  containing the sidecar preview.
+- [x] Add Python release notes that state the development-only limitations.
 - [ ] Run the project release checklist for the selected Python release.
 - [ ] Obtain explicit approval before publishing or tagging anything.
 

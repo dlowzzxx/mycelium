@@ -3,10 +3,22 @@
 Release policy: **batch; calm over velocity.** Prefer one coherent cut over many
 small PyPI versions. Pre-release checklist: [sdk/docs/RELEASE.md](sdk/docs/RELEASE.md).
 
-## Unreleased
+## 1.38.2 (2026-09-05)
+
+This release adds the first development-only, language-neutral sidecar
+protocol. It is intended for local interoperability experiments, not production
+deployment.
 
 ### Added
 
+- Add the frozen `v1alpha1` Transition Envelope contract, identity and
+  canonicalization fixtures, and a machine-readable OpenAPI 3.1 description.
+- Add an authenticated, loopback-only Python sidecar that delegates transition
+  identity, claims, fencing, leases, boundaries, completion, failure, and
+  conservative recovery to the existing authoritative ledger.
+- Add experimental TypeScript and Go sidecar clients as repository packages.
+  They are not included in the Python distribution and are not independently
+  published by this release.
 - Add first-class CrewAI runtime integration through scoped framework hooks.
   Configured tools now receive deterministic crew/run/task/agent dispatch
   identity without signature changes, and successful CrewAI terminals enforce
@@ -36,6 +48,16 @@ small PyPI versions. Pre-release checklist: [sdk/docs/RELEASE.md](sdk/docs/RELEA
 - Allow custom runtimes launched by `mycelium run` to declare a trusted,
   idempotent completion adapter installer that runs before production terminal
   protection is validated.
+
+### Development sidecar limitations
+
+- The sidecar supports trusted local clients over loopback HTTP only.
+- Provider calls remain host-executed, and host-supplied policy evidence is not
+  independent authorization.
+- Remote deployment, multi-tenancy, production authentication, hostile-client
+  protection, provider attestation, and automatic legacy migration are not
+  supported.
+- Reconciliation requires a configured reconciler and otherwise fails closed.
 
 ## 1.38.1 (2026-09-02)
 
