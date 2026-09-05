@@ -12,9 +12,10 @@ worker failure, and recovery. It is designed around the current Python runtime,
 but it deliberately does not expose decorators, Python classes, import paths,
 exceptions, positional arguments, or dataclasses as protocol concepts.
 
-The authoritative component is called the **engine**. An engine may initially be
-the existing Python runtime behind a local adapter or sidecar. An application
-client is a transport and integration layer, not a second safety state machine.
+The authoritative component is called the **engine**. In the `v1alpha1`
+reference implementation, it is the existing Python runtime behind the local
+sidecar. An application client is a transport and integration layer, not a
+second safety state machine.
 
 This revision does **not** promise distributed transactions, automatic discovery
 of provider calls, or exactly-once execution. The narrow guarantee is:
@@ -44,9 +45,11 @@ The contract is grounded in the current repository:
 | Outcome evidence | `audit_receipt.py`, `outcome_emit.py`, `outcome_export.py` |
 | Deployment evidence | `doctor/` and `verify/` |
 | Formal and executable proof aids | `docs/spec/effect_state.tla`, `verify/proof/`, `verify/scenarios/` |
+| Language-neutral adapter | `sdk/mycelium/sidecar.py` and its generated OpenAPI 3.1 document |
+| External-language clients | `clients/typescript/` and `clients/go/` |
 
-The evidence table describes current implementation, not a claim that the proposed
-wire protocol already exists.
+The development-only wire protocol, Python sidecar, and thin TypeScript and Go
+clients now exist. Later-scope deployment and trust features remain proposals.
 
 ## Audit status
 
@@ -55,7 +58,7 @@ The following distinctions are normative for this draft:
 | Label | Meaning |
 |---|---|
 | **Current** | Observable behavior in the Python runtime and its existing tests. |
-| **Proposed** | A future wire-level behavior that an engine/sidecar would implement. |
+| **Proposed** | A future behavior not implemented by the current `v1alpha1` sidecar. |
 | **Deliberate change** | Proposed behavior intentionally different from the current Python API and requiring an explicit compatibility/migration decision. |
 | **Assumption** | An external condition required for a guarantee, such as truthful host identity or durable shared storage. |
 | **Unresolved** | Not sufficiently specified to implement safely. |
@@ -63,23 +66,21 @@ The following distinctions are normative for this draft:
 
 Two important corrections govern the rest of this document:
 
-1. **Current identity is not yet a portable canonical-JSON protocol.**
+1. **Legacy Python identity is not a portable canonical-JSON protocol.**
    `transition.canonical_json()` uses Python JSON serialization with sorted keys,
    compact separators, and `default=str`. `derive_effect_id_for_call()` hashes a
    transition preimage containing `TRANSITION_SCHEMA`, scope, tool, an argument
    fingerprint, destination, side-effect class, `agent_id`, `policy_version`, and
    optionally `dispatch_id`. This is deterministic for the supported Python call
    paths, but `default=str`, Python tuple/list treatment, number rendering, and the
-   optional dispatch ID are not a safe cross-language contract. The `v1alpha1` wire
-   profile below is therefore a **deliberate change**, not a description of current
-   interoperability.
-2. **Current Python `effect_id` is an alias of the transition key.**
-   The proposed engine-derived wire `effect_id` should be defined independently of
-   transport dispatch identity. Removing `dispatch_id` from the effect preimage is
-   a deliberate protocol change. Until that change is implemented, two different
-   dispatch IDs can produce different current keys even when a host considers them
-   the same business effect. Existing Python behavior must remain unchanged while a
-   compatibility mode or migration rule is designed.
+   optional dispatch ID are not a safe cross-language contract. The implemented
+   `v1alpha1` sidecar therefore uses the separate `identity-v1` namespace and
+   portable canonicalization profile without silently reinterpreting legacy rows.
+2. **Legacy Python `effect_id` is an alias of the transition key.**
+   The sidecar derives `identity-v1` effect IDs independently of transport
+   dispatch identity. Removing `dispatch_id` from that preimage is a deliberate
+   protocol change isolated to the new namespace. Existing legacy Python behavior
+   remains unchanged, and automatic migration is unsupported.
 
 # 1. Protocol vocabulary and boundaries
 
@@ -843,7 +844,7 @@ but `effect_id` remains the canonical effect record key.
 
 ## 7.1 Provider-call placement
 
-The first sidecar should own the protocol and durable ledger, but the provider call
+The development sidecar owns the protocol and durable ledger, but the provider call
 should remain in the application process. The application performs this sequence:
 
 1. claim and receive owner/fence;
@@ -962,8 +963,8 @@ client is trusted, merely fallible, or adversarial.
 
 # 8. Thin TypeScript client
 
-The first package should be a **transport client with optional wrappers**, not a
-second runtime. Its responsibilities are:
+The TypeScript package is a **transport client**, not a second runtime. Its
+responsibilities are:
 
 * validate basic JSON shapes and supported protocol versions;
 * serialize canonical input using the published profile;
@@ -1166,26 +1167,25 @@ recovery. Tests must distinguish a compliant client from a compliant engine; a
 client passing fixtures does not establish that it is safe to run an independent
 state machine.
 
-# 13. Roadmap
+# 13. Roadmap and implementation status
 
-| Phase | Deliverable | Dependencies and risks | Exit criteria | Runtime behavior |
-|---|---|---|---|---|
-| 0 | Terminology/evidence audit | Current Python fields have legacy aliases and split outcomes. | Every normative claim maps to code/test evidence. | None. |
-| 1 | Publish this protocol RFC and review decisions | Identity and provider-boundary semantics need maintainer agreement. | Accepted field ownership, state matrix, trust model. | None. |
-| 2 | Add JSON Schema, OpenAPI fragments, canonical fixtures, and error registry | Canonicalization must be frozen before clients. | Python can validate fixtures; negative vectors documented. | None if schemas are documentation-only. |
-| 3 | Local reference sidecar adapter over loopback HTTP | Token auth, process lifecycle, and callback crash windows. | Existing Python engine passes protocol integration checks without changing guarantees. | Adapter only; no core semantic change. |
-| 4 | Thin TypeScript transport client and one-effect helper | JS number/Unicode pitfalls; framework retry semantics. | TS passes client fixtures and duplicate/ambiguous flows against reference sidecar. | No Python behavior change. |
-| 5 | Language-neutral conformance kit | Need reference server and deterministic clock/storage controls. | Go/Rust/Java client prototypes can consume fixtures without reimplementing policy. | None. |
-| 6 | Framework integrations and container sidecar | Bypass detection, auth, secrets, observability, upgrades. | Documented deployment profiles and Doctor/Verify evidence. | Optional adapters. |
-| 7 | Independent engine experiments, only if justified | Divergent safety interpretations and migration burden. | Formal compatibility proof and operational reason to duplicate engine. | Later scope; not required for interoperability. |
+| Phase | Status | Deliverable | Remaining risk or exit criterion |
+|---|---|---|---|
+| 0 | Complete | Terminology and evidence audit | Keep claims linked to implementation evidence. |
+| 1 | Complete | Protocol RFC and approved decision log | Breaking changes require a new protocol revision. |
+| 2 | Complete | JSON Schema, OpenAPI, canonical fixtures, and error registry | Preserve fixture compatibility under `v1alpha1`. |
+| 3 | Development implementation complete | Local reference sidecar over authenticated loopback HTTP | Not a production deployment profile. |
+| 4 | Development implementation complete | Thin TypeScript transport client | Remains experimental and contains no local transition authority. |
+| 5 | Partial | Cross-language fixtures plus a thin Go client | A repeatable, packaged conformance kit remains open. |
+| 6 | Later scope | Framework integrations and container sidecar | Requires bypass, authentication, secrets, observability, and upgrade design. |
+| 7 | Later scope | Independent engine experiments, only if justified | Requires formal compatibility proof and an operational reason to duplicate the engine. |
 
-## Minimum useful first release
+## Implemented development release
 
-The minimum useful release is: versioned JSON Schema, canonicalization fixtures,
-a loopback-HTTP adapter around the existing Python engine, and a TypeScript
-transport client that protects one externally observable effect. It should not
-include a remote multi-tenant service, provider calls inside the sidecar, or an
-independent TypeScript state machine.
+The development release contains the versioned schema, canonicalization
+fixtures, loopback HTTP adapter around the Python engine, and thin TypeScript
+and Go clients. It does not include a remote multi-tenant service, provider
+calls inside the sidecar, or an independent non-Python state machine.
 
 # 14. Decisions and approved prototype boundary
 
@@ -1195,8 +1195,8 @@ independent TypeScript state machine.
 3. **First transport?** Loopback-only HTTP with a high-entropy bearer token and
    JSON messages. Unix-socket peer credentials are optional hardening; remote HTTP
    is prohibited by the prototype profile.
-4. **First TypeScript package?** A transport client first, with a small optional
-   one-effect wrapper after the raw API is stable.
+4. **TypeScript package?** An experimental transport client over the frozen raw
+   API, with no independent ledger or transition authority.
 5. **How report the provider boundary?** Explicit client events immediately before
    and after the call, plus optional provider references. The crash window remains
    and requires reconciliation; no callback can remove it completely.
@@ -1278,10 +1278,11 @@ the sidecar or report provider events dishonestly.
 
 ---
 
-**Maturity labels used here:** current = implemented in Python; proposed = design
-for a future protocol; assumption = required external condition; unresolved = needs
-an explicit design or deployment decision; later scope = intentionally not part of
-the first interoperability release.
+**Maturity labels used here:** current = implemented in the Python engine or
+development sidecar; proposed = design beyond the implemented `v1alpha1`
+profile; assumption = required external condition; unresolved = needs an
+explicit design or deployment decision; later scope = intentionally excluded
+from the first interoperability release.
 
 # Appendix B. Audit evidence index
 

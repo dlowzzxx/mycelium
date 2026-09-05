@@ -6,6 +6,11 @@
 **The reliability layer for AI agents** — installable as `mycelium-runtime`
 (current version on [PyPI](https://pypi.org/project/mycelium-runtime/)).
 
+Mycelium is **language-agnostic at the integration boundary**. The authoritative
+ledger, policy, fencing, and recovery engine remains Python. TypeScript, Go, and
+other runtimes can use that engine through the frozen development-only
+`v1alpha1` sidecar protocol instead of reimplementing its safety semantics.
+
 The public story is the [failure-mode catalog](docs/FAILURE_MODE_CATALOG.md) (**AF-001…AF-012**): each ID is a real runtime failure class; each shipped surface is a deterministic guard. The taxonomy is the product promise; envelope fields and gates are how AF-002 is implemented underneath.
 
 **Releases:** batch; calm over velocity — [release policy & pre-release checklist](docs/RELEASE.md).
@@ -90,7 +95,9 @@ Envelope field stack (`side_effect_class` → spendability → boundary → …)
 
 `mycelium init` / `mycelium run` center on AF-002. Other catalog guards are available when you configure them.
 
-Framework-agnostic. Raw message lists and plain Python functions (LangGraph, CrewAI, OpenAI tool loops, etc.).
+Framework-agnostic in Python, and language-neutral through the sidecar. Raw
+message lists and plain Python functions work directly; non-Python runtimes use
+the same HTTP/OpenAPI transition lifecycle.
 
 ### Framework integration support
 
@@ -104,7 +111,9 @@ integration path explicitly:
 | LangGraph `ToolNode` / `create_agent` | Automatic from injected `ToolRuntime` when `integrations.langgraph` is enabled | YAML, `@config.apply`, or ledger decorators | Automatic budget and completion adapters when configured |
 | CrewAI | Automatic logical dispatch identity from crew/run/task/agent metadata when `integrations.crewai` is enabled; host-supplied `request_id` remains required for consequential production tools | YAML, `@config.apply`, or ledger decorators | Automatic completion terminal; `instrument_crewai_llm` provides budget accounting |
 | Plain Python or another Python framework | Host-supplied identity is recommended | Decorators or [manual claim/complete](#manual-integration-claim--execute--complete) | Host calls completion, budget, and scope hooks explicitly |
-| TypeScript or another non-Python runtime | No native identity adapter | No native SDK; place the guarded operation behind a Python service boundary or implement the transition protocol in the host | Host-owned |
+| TypeScript | Host supplies stable business identity; sidecar derives the authoritative effect identity | Experimental `@mycelium-labs/sidecar-client` transport client over the local sidecar | Host executes provider calls and reports boundaries truthfully |
+| Go | Host supplies stable business identity; sidecar derives the authoritative effect identity | Experimental `github.com/mycelium-labs/mycelium/clients/go` transport client over the local sidecar | Host executes provider calls and reports boundaries truthfully |
+| Another non-Python runtime | Host supplies stable business identity | Use the authenticated `v1alpha1` HTTP/OpenAPI contract | Host-owned; unknown safety-critical values must fail closed |
 
 For consequential operations, prefer a stable host-owned business identifier
 such as `charge-order:ORD-123` over a random or model-generated dispatch ID.
@@ -115,7 +124,7 @@ same real-world action. See
 
 ## What Mycelium does not do
 
-Mycelium is an **embeddable transition envelope at the tool boundary** — classify → claim/lease → gate (`RETURN` / `POLL` / `REPAIR` / `HARD_BLOCK` / …) → optional reconcile — for LangGraph, CrewAI, or plain Python, via YAML + decorators or manual claim/complete. It is not a full agent platform and deliberately stays out of adjacent lanes:
+Mycelium is an **embeddable transition envelope at the tool boundary** — classify → claim/lease → gate (`RETURN` / `POLL` / `REPAIR` / `HARD_BLOCK` / …) → optional reconcile — for LangGraph, CrewAI, plain Python, or a non-Python client using the sidecar. It is not a full agent platform and deliberately stays out of adjacent lanes:
 
 | Not this | That lane | What Mycelium does instead |
 |---|---|---|
@@ -145,6 +154,25 @@ mycelium config example    # model-validated example YAML
 mycelium demo              # feature tour: unguarded vs ledgered + gates / hard-block / release
 mycelium demo --redis      # optional Cloud-style 2-worker Redis proof
 ```
+
+### TypeScript, Go, and other languages
+
+Run the authoritative Python engine as a local sidecar:
+
+```bash
+mycelium sidecar serve --config /absolute/path/to/sidecar.yaml
+```
+
+Then use the experimental [TypeScript client](../clients/typescript/README.md),
+[Go client](../clients/go/README.md), or the authenticated
+[`v1alpha1` OpenAPI contract](docs/spec/README.md). All clients use the same
+identity, claim, lease, fence, boundary, and outcome lifecycle. They do not
+contain independent policy or recovery engines.
+
+The development profile accepts trusted local clients over loopback only. It
+does not yet provide remote hosting, multi-tenancy, production authentication,
+hostile-client protection, or provider attestation. Calls that bypass the
+sidecar remain unprotected.
 
 ## Quickstart: stale context & broken transcripts (opt-in)
 

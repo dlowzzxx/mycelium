@@ -10,8 +10,14 @@ Wrong answers are recoverable. Wrong actions are expensive. Mycelium sits betwee
 
 Not recovery after. Not tracing or dashboards. Prevention at the tool boundary.
 
-*Early but API-stable: breaking changes only at major versions. The catalog
-grows; the promise stays. Current package version is on
+Mycelium is **language-agnostic at the integration boundary**. Python remains
+the authoritative reliability engine, while TypeScript, Go, and other runtimes
+can use the same frozen `v1alpha1` HTTP/OpenAPI protocol through the local
+sidecar. Clients do not reimplement the ledger or safety state machine.
+
+*The Python API is early but stable: breaking changes only at major versions.
+The `v1alpha1` sidecar protocol is frozen for development but not yet a stable
+production contract. The catalog grows; the promise stays. Current package version is on
 [PyPI](https://pypi.org/project/mycelium-runtime/) — do not hardcode it here.*
 
 Early design-partner use: **live outbound-email lane** (Week 1: 25 ledgered sends, 0 duplicates). Not a public logo; the interactive sandbox is separate.
@@ -38,9 +44,38 @@ Full definitions (shipped vs roadmap): [sdk/docs/FAILURE_MODE_CATALOG.md](sdk/do
 
 ## Who it's for
 
-Developers running **agents with side-effect tools** in production (payments, emails, API writes, long subagent calls) on **LangGraph, CrewAI, or a plain Python loop**.
+Developers running **agents with side-effect tools** on **LangGraph, CrewAI,
+plain Python, TypeScript, Go, or another runtime that can speak HTTP/JSON**.
 
-Python 3.10+. Framework-agnostic. Drop in via YAML + `mycelium run`, or decorators.
+The authoritative engine requires Python 3.10+. Python applications can use
+YAML, `mycelium run`, or decorators. Other languages connect through the
+development sidecar protocol.
+
+## Language-neutral integration
+
+The safety semantics live in one engine rather than being reimplemented in
+every language:
+
+```text
+Python app      TypeScript app      Go app      Other HTTP client
+    |                 |                |                 |
+    +-----------------+----------------+-----------------+
+                              |
+                    v1alpha1 sidecar protocol
+                              |
+                    Python Mycelium engine
+                              |
+                durable ledger and guardrails
+```
+
+This makes Mycelium language-agnostic for integration without creating several
+competing state machines. The current sidecar is loopback-only and intended for
+trusted local development. Remote deployment, production authentication,
+multi-tenancy, and hostile-client guarantees remain later work.
+
+See the [protocol overview](sdk/docs/spec/README.md),
+[TypeScript client](clients/typescript/README.md), and
+[Go client](clients/go/README.md).
 
 ## How it works
 
@@ -139,6 +174,18 @@ mycelium init --full       # reference: all guards (fill TODOs; not the default)
 mycelium init --minimal    # smaller multi-guard scaffold
 ```
 
+For a TypeScript, Go, or other non-Python application, install the Python
+engine, start the local sidecar, and connect through a client or the OpenAPI
+contract:
+
+```bash
+pip install mycelium-runtime
+mycelium sidecar serve --config /absolute/path/to/sidecar.yaml
+```
+
+The sidecar protects only operations routed through its lifecycle. A direct
+provider call that bypasses it is outside Mycelium's boundary.
+
 `mycelium demo --redis` runs two OS processes against a real Redis ledger — Worker B redispatches while A is in-flight; B polls and returns A's result. Needs Redis (`MYCELIUM_TEST_REDIS_URL` or `redis://127.0.0.1:6379/15`) and `pip install 'mycelium-runtime[redis]'`.
 
 `mycelium init` is the real start path (duplicate-tool fix). Use `--full` when you want every section documented in one file.
@@ -229,6 +276,8 @@ or `'mycelium-runtime[postgres]'`. See the
 - **Try in 5 minutes:** https://mycelium-labs.github.io/try.html
 - **Sandbox demo:** [mycelium-labs/mycelium-labs.github.io/sandbox](https://github.com/mycelium-labs/mycelium-labs.github.io/tree/main/sandbox)
 - **Full API reference:** [sdk/README.md](sdk/README.md)
+- **Language-neutral protocol:** [sdk/docs/spec/README.md](sdk/docs/spec/README.md)
+- **Experimental clients:** [TypeScript](clients/typescript/README.md) · [Go](clients/go/README.md)
 - **Doctor vs Verify:** `mycelium doctor` inspects configuration; `mycelium verify` runs synthetic failure scenarios. Neither proves a real provider is correct.
 - **Release policy & checklist:** [sdk/docs/RELEASE.md](sdk/docs/RELEASE.md) (batch; calm over velocity)
 - **Security policy & private reporting:** [SECURITY.md](SECURITY.md)

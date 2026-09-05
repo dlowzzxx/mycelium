@@ -1,5 +1,11 @@
 # Effect State Spec Notes
 
+Mycelium is language-agnostic at this protocol boundary. The Python sidecar is
+the authoritative engine; TypeScript, Go, and future clients speak the same
+HTTP/OpenAPI contract without duplicating the ledger or transition state
+machine. This is interoperability, not a claim that every language has an
+independent Mycelium engine.
+
 ## Language-neutral protocol design
 
 - [v1alpha1 freeze and release checklist](V1ALPHA1_RELEASE_CHECKLIST.md): frozen
