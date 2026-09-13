@@ -507,6 +507,26 @@ def parse_guarantee_map(
     return rows, errors
 
 
+def _matches_disk_casing(base: Path, relative_path: Path) -> bool:
+    """Verify that every component of relative_path matches the exact on-disk name under base.
+
+    On case-insensitive filesystems (such as macOS APFS/HFS+ or Windows NTFS), Path.resolve()
+    does not reliably normalize the casing of directory components or filenames. Comparing
+    each path component against actual on-disk directory entries via os.scandir ensures
+    consistent case-sensitivity enforcement across all platforms.
+    """
+    current = base
+    for part in relative_path.parts:
+        try:
+            with os.scandir(current) as it:
+                if not any(entry.name == part for entry in it):
+                    return False
+            current = current / part
+        except (OSError, ValueError):
+            return False
+    return True
+
+
 def resolve_test_file(
     root: Path, file_path_str: str, custom_test_dir: Path | None = None
 ) -> Path | None:
@@ -551,9 +571,11 @@ def resolve_test_file(
                 # Enforce path confinement within base directory
                 if not res.is_relative_to(base_res):
                     continue
-                # Enforce exact case sensitivity for all path components
-                if c.relative_to(base).parts == res.relative_to(base_res).parts:
-                    return res
+                # Enforce exact case sensitivity for all path components against disk entries
+                rel_path = c.relative_to(base)
+                if not _matches_disk_casing(base_res, rel_path):
+                    continue
+                return res
         except (OSError, ValueError):
             continue
 
