@@ -138,7 +138,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install SDK
-        run: pip install -e "./sdk[dev]"
+        run: pip install -e "./sdk[dev,redis,postgres,observability]"
 
       - name: Ruff
         working-directory: sdk
