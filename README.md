@@ -6,6 +6,8 @@
 
 **The reliability layer for AI agents.**
 
+![Mycelium sits between an AI agent and its tools, checking tool permissions, arguments, destinations, sensitive information, current authority, destructive-action confirmation, duplicate actions, and run budgets. If a required check fails, Mycelium stops the action.](assets/mycelium-tool-checks.png)
+
 Your agent decides what to do. Mycelium makes tool actions reliable across
 their full lifecycle:
 

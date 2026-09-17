@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980">
+  <title>Mycelium checks an AI agent's tool actions before they run</title>
+  <desc>An AI agent proposes a tool action. Mycelium sits between the agent and tools and performs eight checks. If a required check fails, Mycelium stops the action.</desc>
+  <defs>
+    <style>
+      .ink{fill:#28332f} .hand{font-family:Noteworthy,'Comic Sans MS',cursive;font-weight:700}
+      .body{font-family:'Avenir Next',Avenir,sans-serif;font-weight:400;fill:#28332f;font-size:27px}
+      .small{font-family:'Avenir Next',Avenir,sans-serif;font-size:21px;fill:#626b63}
+      .line{fill:none;stroke:#28332f;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+      .rule{stroke:#d9d8cc;stroke-width:1.5}
+    </style>
+    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M2 2 L9 6 L2 10" fill="none" stroke="#798178" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+  </defs>
+  <path fill="#faf8f0" d="M0 0H1600V980H0Z"/>
+  <text x="82" y="67" class="small" style="font-size:17px;letter-spacing:2.5px">BEFORE A TOOL ACTION RUNS</text>
+
+  <!-- A modest agent, a single mushroom, and the tools it mediates. -->
+  <path class="line" d="M107 170 L329 168 L332 300 L106 302 Z"/>
+  <path class="line" d="M107 205 L329 204"/>
+  <circle cx="123" cy="187" r="3" fill="#28332f"/><circle cx="137" cy="187" r="3" fill="#28332f"/>
+  <text x="218" y="268" text-anchor="middle" class="hand ink" font-size="39">AI agent</text>
+  <path d="M358 237 C435 234 493 240 572 237" fill="none" stroke="#798178" stroke-width="2" stroke-dasharray="7 9" stroke-linecap="round" marker-end="url(#arrow)"/>
+  <text x="465" y="183" text-anchor="middle" class="small">Proposed</text>
+  <text x="465" y="211" text-anchor="middle" class="small">tool action</text>
+
+  <!-- Deliberately simple, asymmetric mushroom silhouette. -->
+  <path d="M754 188 C754 217 749 238 740 265 Q765 279 813 273 Q835 270 834 260 C821 234 818 210 819 189" fill="#faf8f0" stroke="#28332f" stroke-width="3.5" stroke-linejoin="round"/>
+  <path d="M674 190 C688 158 713 141 740 121 C762 102 779 102 796 112 C824 128 858 151 885 181 Q891 191 878 195 C819 204 738 206 679 198 Q669 197 674 190Z" fill="#d88c55" stroke="#28332f" stroke-width="3.5" stroke-linejoin="round"/>
+  <path d="M701 192 Q778 182 859 191" fill="none" stroke="#28332f" stroke-width="2.2" stroke-linecap="round"/>
+  <text x="783" y="335" text-anchor="middle" class="hand ink" font-size="61">Mycelium</text>
+  <path d="M683 350 Q783 345 876 349" fill="none" stroke="#d88c55" stroke-width="4" stroke-linecap="round"/>
+
+  <path d="M960 237 C1027 235 1082 240 1154 237" fill="none" stroke="#798178" stroke-width="2" stroke-dasharray="7 9" stroke-linecap="round" marker-end="url(#arrow)"/>
+  <text x="1056" y="183" text-anchor="middle" class="small">Required</text>
+  <text x="1056" y="211" text-anchor="middle" class="small">checks pass</text>
+  <text x="1300" y="170" text-anchor="middle" class="hand ink" font-size="39">Tools</text>
+  <path class="line" d="M1195 204 L1409 204 L1410 302 L1194 301 Z"/>
+  <path class="line" d="M1219 228 L1232 240 L1219 252 M1242 253 L1261 253"/>
+  <text x="1291" y="251" class="ink" font-family="Menlo,monospace" font-size="29">{ }</text>
+  <ellipse class="line" cx="1374" cy="230" rx="17" ry="6"/>
+  <path class="line" d="M1357 230V258 C1357 267 1391 267 1391 258V230 M1357 244 C1357 253 1391 253 1391 244"/>
+  <text x="1300" y="340" text-anchor="middle" class="small">APIs · commands · data</text>
+
+  <path class="rule" d="M82 401H1518"/>
+  <text x="82" y="453" class="hand ink" font-size="32">The checks</text>
+  <text x="1518" y="451" text-anchor="end" class="small">Checked before the action reaches a tool.</text>
+
+  <!-- Plain, aligned checklist; no decorative cards. -->
+  <g class="body">
+    <text x="137" y="518">Is this tool allowed?</text>
+    <text x="137" y="604">Are the arguments valid?</text>
+    <text x="137" y="690">Is the destination allowed?</text>
+    <text x="137" y="776">Is sensitive information being exposed?</text>
+    <text x="860" y="518">Does the agent still have permission?</text>
+    <text x="860" y="591">Does a destructive action need</text>
+    <text x="860" y="625">confirmation?</text>
+    <text x="860" y="690">Has this same action already happened?</text>
+    <text x="860" y="763">Has the agent exceeded its time, step,</text>
+    <text x="860" y="797">token, or cost budget?</text>
+  </g>
+  <g fill="none" stroke="#7f887b" stroke-width="2" stroke-linejoin="round">
+    <path d="M88 499h22v22H88Z M88 585h22v22H88Z M88 671h22v22H88Z M88 757h22v22H88Z"/>
+    <path d="M811 499h22v22H811Z M811 585h22v22H811Z M811 671h22v22H811Z M811 757h22v22H811Z"/>
+  </g>
+  <g class="rule"><path d="M82 547H738 M82 633H738 M82 719H738 M805 547H1518 M805 633H1518 M805 719H1518"/></g>
+  <path class="rule" d="M82 850H1518"/>
+  <path d="M89 884H111L125 898V920L111 934H89L75 920V898Z" fill="#d88c55"/>
+  <path d="M92 901L108 917 M108 901L92 917" fill="none" stroke="#28332f" stroke-width="3" stroke-linecap="round"/>
+  <text x="148" y="920" class="hand ink" font-size="32">If a required check fails, Mycelium stops the action.</text>
+</svg>
