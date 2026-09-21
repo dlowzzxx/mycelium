@@ -2,7 +2,7 @@
   "$schema": "./architecture_provenance.schema.json",
   "schema_version": 1,
   "package_version": "1.38.3",
-  "review_base_commit": "58cc2c8",
+  "review_base_commit": "58cc2c8e42923b234172bdb1c88302866928048c",
   "reviewed_at": "2026-09-20",
   "provenance_model": "ancestor_base_with_file_manifest",
   "provenance_statement": "This manifest captures cryptographic hashes of the canonical Python source and test suites backing the Mycelium architecture map at the review base commit. It guarantees traceable review baselines and mechanical drift detection without impossible Git self-reference.",
